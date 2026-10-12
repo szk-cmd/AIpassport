@@ -8,6 +8,7 @@ export const MOCK_TRIP: Trip = {
   start_date: "2026-11-14",
   end_date: "2026-11-16",
   status: "awaiting_review",
+  plan: "free",
   created_at: "2026-11-17T09:00:00+07:00",
 };
 

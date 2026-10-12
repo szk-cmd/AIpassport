@@ -13,8 +13,14 @@
 พื้นน้ำตาลเข้ม #2B2019, ครีม #F7F2EA, ส้ม #E0642C, เขียวอมฟ้า #1E6B63, เหลืองทอง #E8A93C
 ฟอนต์ Prompt (หัวข้อ) + IBM Plex Sans Thai (เนื้อหา) จาก Google Fonts
 
+## แพ็กเกจ (lib/plans.ts)
+ทดลองฟรี ฿0 (30 รูป/10 เอกสาร), Plus ฿99 (100/30), Pro ฿499 (300/60), Max ฿999 (600/100) ต่อ 1 ทริป
+ตอนนี้เลือกได้แค่ทดลองฟรี แพ็กเกจอื่นแสดง "เร็วๆ นี้" ยังไม่มีระบบจ่ายเงิน
+ไฟล์ละไม่เกิน 10MB
+
 ## Flow ผู้ใช้
-1. /new : ชื่อทริป + วันเริ่ม-วันจบ + เลือกรูป/ตั๋ว/ใบเสร็จจากมือถือรวดเดียว
+0. / : หน้าแรก โลโก้ + ปุ่ม "ลองใช้งานเลย ไม่ต้องสมัคร" → /new, ปุ่มเข้าสู่ระบบ "เร็วๆ นี้"
+1. /new : เลือกแพ็กเกจ + ชื่อทริป + วันเริ่ม-วันจบ + 2 ช่องอัปโหลด (รูปเที่ยว / ตั๋ว-ใบเสร็จ-ที่พัก) จำกัดจำนวนตามแพ็กเกจ
 2. /trip/[id]/confirm : การ์ดรูปที่ AI คัด + ข้อมูลที่ดึงได้ แก้/เพิ่ม/ลบได้ confidence ต่ำไฮไลต์เหลือง
 3. /trip/[id]/progress : ข้อความภาษาคน เช่น "กำลังเขียนเรื่องเล่า..." ไม่โชว์ชื่อ agent/error
 4. /trip/[id]/review : แก้เรื่องเล่า/ค่าใช้จ่าย แล้วกดยืนยัน
@@ -34,7 +40,7 @@
 fail → retry 1 ครั้ง แล้วแจ้งผู้ใช้เป็นภาษาคน
 
 ## Database
-- trips: id, title, start_date, end_date, status
+- trips: id, title, start_date, end_date, status, plan
 - trip_items: id, trip_id, type (photo/ticket/lodging/expense), data jsonb, file_url, taken_at, lat, lng, selected, confidence
 - agent_runs: id, trip_id, agent, status, started_at, ended_at, error
 - trip_outputs: trip_id, summary jsonb, updated_at

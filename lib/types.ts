@@ -1,3 +1,5 @@
+import type { PlanId } from "./plans";
+
 // ---------- ตารางในฐานข้อมูล (ตรงกับ supabase/schema.sql) ----------
 
 export type TripStatus =
@@ -14,6 +16,7 @@ export type Trip = {
   start_date: string; // "YYYY-MM-DD"
   end_date: string;
   status: TripStatus;
+  plan: PlanId;
   created_at: string;
 };
 

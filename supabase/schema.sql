@@ -11,8 +11,14 @@ create table if not exists trips (
   end_date date,
   -- draft → collecting → processing → awaiting_review → published (หรือ failed)
   status text not null default 'draft',
+  -- แพ็กเกจ (ดู lib/plans.ts) ตอนนี้เปิดแค่ free
+  plan text not null default 'free' check (plan in ('free', 'plus', 'pro', 'max')),
   created_at timestamptz not null default now()
 );
+
+-- สำหรับฐานข้อมูลที่สร้าง trips ไปแล้วก่อนมีคอลัมน์ plan
+alter table trips add column if not exists plan text not null default 'free'
+  check (plan in ('free', 'plus', 'pro', 'max'));
 
 create table if not exists trip_items (
   id uuid primary key default gen_random_uuid(),
