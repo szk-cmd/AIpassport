@@ -10,6 +10,7 @@ const GROUPS = [
   {
     title: "Flow ผู้ใช้",
     links: [
+      { href: "/", label: "0. หน้าแรก", note: "/" },
       { href: "/new", label: "1. เริ่มทริปใหม่", note: "/new" },
       { href: `/trip/${id}/confirm`, label: "2. ตรวจสอบข้อมูล", note: "/trip/[id]/confirm" },
       { href: `/trip/${id}/progress`, label: "3. กำลังสร้าง", note: "/trip/[id]/progress" },
