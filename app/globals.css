@@ -1,26 +1,24 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* สีและฟอนต์ตาม CLAUDE.md ใช้ใน Tailwind ได้ เช่น bg-brown, text-cream, font-heading */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brown: #2b2019;
+  --color-cream: #f7f2ea;
+  --color-orange: #e0642c;
+  --color-teal: #1e6b63;
+  --color-gold: #e8a93c;
+  --font-sans: var(--font-plex-thai), sans-serif;
+  --font-heading: var(--font-prompt), sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-brown);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
 }
