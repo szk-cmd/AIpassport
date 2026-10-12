@@ -1,25 +1,26 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { MOCK_TRIP } from "@/lib/mock";
 import { DEFAULT_PLAN, getPlan, type PlanId } from "@/lib/plans";
 import { FilePicker, type PickedFile } from "./FilePicker";
-import { PlanPicker } from "./PlanPicker";
 
 const inputClass =
   "mt-1 w-full rounded-xl border border-brown/20 bg-white px-4 py-3 text-brown outline-none focus:border-orange";
 
 export function NewTripForm() {
   const router = useRouter();
-  const [planId, setPlanId] = useState<PlanId>(DEFAULT_PLAN.id);
+  // แพ็กเกจมาจากหน้า /plan ทาง URL (?plan=free) ถ้าไม่มีหรือยังไม่เปิดให้ใช้ ใช้แพ็กเกจฟรี
+  const requested = getPlan((useSearchParams().get("plan") ?? DEFAULT_PLAN.id) as PlanId);
+  const plan = requested.available ? requested : DEFAULT_PLAN;
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [photos, setPhotos] = useState<PickedFile[]>([]);
   const [docs, setDocs] = useState<PickedFile[]>([]);
 
-  const plan = getPlan(planId);
   const dateError = startDate && endDate && endDate < startDate;
   const canSubmit = title.trim() !== "" && startDate !== "" && endDate !== "" && !dateError;
 
@@ -32,12 +33,18 @@ export function NewTripForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-6 space-y-6">
-      {/* ---------- แพ็กเกจ ---------- */}
-      <section className="rounded-2xl bg-cream p-5 text-brown">
-        <h2 className="text-lg font-semibold">เลือกแพ็กเกจ</h2>
-        <p className="mb-3 text-sm text-brown/60">ช่วงทดลองเปิดให้ใช้แพ็กเกจฟรีก่อน</p>
-        <PlanPicker value={planId} onChange={setPlanId} />
-      </section>
+      {/* ---------- แพ็กเกจที่เลือกไว้ ---------- */}
+      <div className="flex items-center justify-between rounded-2xl border border-cream/20 px-4 py-3">
+        <div>
+          <p className="text-xs text-cream/60">แพ็กเกจ</p>
+          <p className="font-heading font-semibold">
+            {plan.name} <span className="text-gold">· {plan.maxPhotos} รูป · {plan.maxDocs} เอกสาร</span>
+          </p>
+        </div>
+        <Link href="/plan" className="text-sm text-cream/70 underline hover:text-cream">
+          เปลี่ยน
+        </Link>
+      </div>
 
       {/* ---------- ข้อมูลทริป + ไฟล์ ---------- */}
       <section className="space-y-5 rounded-2xl bg-cream p-5 text-brown">
