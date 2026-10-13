@@ -4,17 +4,18 @@ type Props = {
   photo: { file_url: string | null; data: PhotoData };
   className?: string;
   showCaption?: boolean;
+  hidePlace?: boolean; // ไม่ต้องแสดงชื่อสถานที่บนรูป placeholder
 };
 
 // แสดงรูปจริงถ้ามี file_url ไม่งั้นแสดงกล่องสี placeholder พร้อมชื่อสถานที่
-export function Photo({ photo, className = "", showCaption = false }: Props) {
+export function Photo({ photo, className = "", showCaption = false, hidePlace = false }: Props) {
   const { caption, place, color } = photo.data;
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
       {photo.file_url ? (
         // eslint-disable-next-line @next/next/no-img-element -- รูปจาก Supabase Storage ขนาดไม่แน่นอน
-        <img src={photo.file_url} alt={caption} className="h-full w-full object-cover" />
+        <img src={photo.file_url} alt={caption} draggable={false} className="h-full w-full object-cover" />
       ) : (
         <div
           role="img"
@@ -24,7 +25,7 @@ export function Photo({ photo, className = "", showCaption = false }: Props) {
             background: `linear-gradient(160deg, ${color} 0%, ${color}cc 55%, #2B2019 130%)`,
           }}
         >
-          {!showCaption && (
+          {!showCaption && !hidePlace && (
             <span className="text-sm font-medium text-cream/90 drop-shadow">{place}</span>
           )}
         </div>
