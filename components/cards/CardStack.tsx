@@ -8,26 +8,29 @@ import {
   useTransform,
   type PanInfo,
 } from "framer-motion";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const SWIPE_DISTANCE = 100; // ลากเกินกี่ px ถึงนับว่าปัด
 const SWIPE_VELOCITY = 500; // หรือสะบัดเร็วเกินนี้
 const PEEK = 3; // จำนวนการ์ดที่ซ้อนให้เห็นด้านหลัง (รวมใบบนสุด)
 
 // การ์ดเกือบเต็มจอ แนวตั้ง สูงไม่เกิน 780px (เผื่อที่ให้หัวหน้าและปุ่มด้านล่าง)
-const CARD_HEIGHT = "min(calc(100dvh - 175px), 780px)";
-const STACK_SIZE = {
-  height: CARD_HEIGHT,
-  width: `min(calc(100vw - 32px), calc(${CARD_HEIGHT} * 0.62))`,
-};
+const DEFAULT_HEIGHT = "min(calc(100dvh - 175px), 780px)";
+const stackSize = (height: string) => ({
+  height,
+  width: `min(calc(100vw - 32px), calc(${height} * 0.62))`,
+});
 
-type Props = { cards: React.ReactNode[] };
+type Props = {
+  cards: React.ReactNode[];
+  height?: string; // ความสูงการ์ด (CSS) เช่น "min(calc(100dvh - 300px), 640px)"
+};
 
 // ระยะที่การ์ดบินออกไปทางซ้ายจนพ้นจอ (การ์ดที่ปัดออกมีได้หลังผู้ใช้กดเท่านั้น จึงอยู่ในเบราว์เซอร์เสมอ)
 const flyDistance = () => (typeof window === "undefined" ? 1200 : window.innerWidth * 1.2);
 
 // กองการ์ดแบบ Tinder: ปัดซ้าย = ใบถัดไป, ปัดขวา = ย้อนกลับ
-export function CardStack({ cards }: Props) {
+export function CardStack({ cards, height = DEFAULT_HEIGHT }: Props) {
   const [index, setIndex] = useState(0);
   const reduce = useReducedMotion() ?? false;
   const last = cards.length - 1;
@@ -51,7 +54,7 @@ export function CardStack({ cards }: Props) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 py-4">
       {/* mb เผื่อขอบการ์ดใบหลังที่โผล่ลงมาใต้ใบบน */}
-      <div className="relative mb-7" style={STACK_SIZE} aria-roledescription="กองการ์ด">
+      <div className="relative mb-7" style={stackSize(height)} aria-roledescription="กองการ์ด">
         {visible
           .slice()
           .reverse() // ใบล่างวาดก่อน ใบบนสุดอยู่บนสุด
@@ -114,6 +117,7 @@ function StackCard({ position, reduce, canNext, canPrev, onNext, onPrev, childre
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 0, 300], [-16, 0, 16]); // เอียงตามทิศที่ลาก
   const isTop = position === 0;
+  const dragged = useRef(false); // ลากแล้วปล่อย ไม่นับเป็นการแตะลิงก์ในการ์ด
 
   function handleDragEnd(_: unknown, info: PanInfo) {
     const swipedLeft = info.offset.x < -SWIPE_DISTANCE || info.velocity.x < -SWIPE_VELOCITY;
@@ -156,6 +160,14 @@ function StackCard({ position, reduce, canNext, canPrev, onNext, onPrev, childre
       dragElastic={0.9}
       dragMomentum={false}
       onDragEnd={handleDragEnd}
+      onPointerDown={() => (dragged.current = false)}
+      onDragStart={() => (dragged.current = true)}
+      onClickCapture={(e) => {
+        if (dragged.current) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
       aria-hidden={!isTop}
     >
       <div
