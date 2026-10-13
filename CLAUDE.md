@@ -9,6 +9,10 @@
 - ทำคนเดียว 3 สัปดาห์: เลือกวิธีที่ง่ายที่สุดที่ใช้งานได้
 - ไม่ทำ: login, RLS, Supabase Realtime (ใช้ polling ทุก 2 วิ), LINE
 
+## หมายเหตุการพัฒนา
+- dev server ไม่รับการแก้ app/globals.css (Tailwind turbopack cache) → หยุด dev, ลบโฟลเดอร์ .next, รัน npm run dev ใหม่
+  เลยใส่ style เฉพาะหน้าไว้ในคอมโพเนนต์ (Tailwind class / inline style) แทนการเพิ่มใน globals.css
+
 ## โทนดีไซน์
 พื้นน้ำตาลเข้ม #2B2019, ครีม #F7F2EA, ส้ม #E0642C, เขียวอมฟ้า #1E6B63, เหลืองทอง #E8A93C
 ฟอนต์ Prompt (หัวข้อ) + IBM Plex Sans Thai (เนื้อหา) จาก Google Fonts
