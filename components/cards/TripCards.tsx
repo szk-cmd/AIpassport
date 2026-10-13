@@ -1,9 +1,9 @@
 // เนื้อหาการ์ดแต่ละใบใน /t/[slug] ขนาดทุกอย่างใช้ cqw (% ของความกว้างการ์ด) จึงย่อ/ขยายตามจอ
 import { Photo } from "@/components/Photo";
 import { RouteLine } from "@/components/RouteMap";
-import { formatBaht, formatDate, formatDateRange } from "@/lib/format";
+import { CATEGORY_LABELS, formatBaht, formatDate, formatDateRange } from "@/lib/format";
 import { getPhoto } from "@/lib/mock";
-import type { DayStory, TripSummary } from "@/lib/types";
+import type { DayStory, ExpenseCategory, TripSummary } from "@/lib/types";
 import { Stamp, STAMP_COLORS } from "./Stamp";
 
 // ---------- 1) ปก ----------
@@ -115,6 +115,66 @@ export function DayCard({ day, index }: { day: DayStory; index: number }) {
         color={STAMP_COLORS[index % 2]}
         className="pointer-events-none absolute right-[4cqw] bottom-[4cqw] w-[32cqw]"
       />
+    </div>
+  );
+}
+
+// ---------- 4) ค่าใช้จ่าย ----------
+const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
+  transport: "✈️",
+  lodging: "🏨",
+  food: "🍜",
+  activity: "🎟️",
+  shopping: "🛍️",
+  other: "🧾",
+};
+
+export function ExpensesCard({ s }: { s: TripSummary }) {
+  const total = s.expenses.total;
+  // รวมตามหมวด เรียงจากมากไปน้อย
+  const groups = Object.entries(
+    s.expenses.items.reduce<Partial<Record<ExpenseCategory, { amount: number; count: number }>>>((acc, e) => {
+      const g = acc[e.category] ?? { amount: 0, count: 0 };
+      acc[e.category] = { amount: g.amount + e.amount, count: g.count + 1 };
+      return acc;
+    }, {}),
+  ).sort((a, b) => b[1].amount - a[1].amount) as [ExpenseCategory, { amount: number; count: number }][];
+
+  return (
+    <div className="flex h-full flex-col p-[7cqw]">
+      <CardLabel>ค่าใช้จ่าย</CardLabel>
+      <p className="mt-[1cqw] font-heading text-[14cqw] leading-none font-bold text-orange">{formatBaht(total)}</p>
+      <p className="mt-[2cqw] text-[3.8cqw] text-brown/60">
+        {s.expenses.items.length} รายการ · เฉลี่ยวันละ {formatBaht(Math.round(total / s.stats.days))}
+      </p>
+
+      <ul className="mt-[6cqw] flex-1 space-y-[4.5cqw] border-t-2 border-dashed border-brown/20 pt-[5cqw]">
+        {groups.map(([cat, g]) => {
+          const percent = Math.round((g.amount / total) * 100);
+          return (
+            <li key={cat}>
+              <div className="flex items-baseline justify-between text-[4.2cqw]">
+                <span>
+                  <span aria-hidden>{CATEGORY_ICONS[cat]}</span> {CATEGORY_LABELS[cat]}
+                  <span className="ml-[2cqw] text-[3.2cqw] text-brown/50">{g.count} รายการ</span>
+                </span>
+                <span className="font-heading font-semibold">{formatBaht(g.amount)}</span>
+              </div>
+              <div className="mt-[1.5cqw] flex items-center gap-[2cqw]">
+                <div className="h-[1.8cqw] flex-1 rounded-full bg-brown/10">
+                  <div className="h-full rounded-full bg-teal" style={{ width: `${percent}%` }} />
+                </div>
+                <span className="w-[9cqw] text-right text-[3.2cqw] text-brown/55">{percent}%</span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="flex items-baseline justify-between border-t-2 border-dashed border-brown/20 pt-[4cqw] font-heading">
+        <span className="text-[4.5cqw] font-semibold">รวมทั้งทริป</span>
+        <span className="text-[6cqw] font-bold">{formatBaht(total)}</span>
+      </div>
     </div>
   );
 }
