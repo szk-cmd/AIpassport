@@ -32,7 +32,7 @@
 3. /trip/[id]/progress : ข้อความภาษาคน เช่น "กำลังเขียนเรื่องเล่า..." ไม่โชว์ชื่อ agent/error
 4. /trip/[id]/review : แก้เรื่องเล่า/ค่าใช้จ่าย แล้วกดยืนยัน
 5. Output 3 แบบ:
-   - /t/[slug] Digital History: timeline รายวัน แผนที่ เรื่องเล่า รูปเด่น ค่าใช้จ่าย QR
+   - /t/[slug] Digital History: กองการ์ดปัดแบบ Tinder (framer-motion) ปก → สรุปตัวเลข → รายวัน → ค่าใช้จ่าย → ตราประทับทุกที่ → แชร์ (QR/คัดลอกลิงก์/ไป social, print)
    - /t/[slug]/print กรอบรูป A4 แนวตั้ง สำหรับผู้สูงอายุ ตัวใหญ่ ข้อความสั้น QR มุมล่าง
    - /t/[slug]/social การ์ด minimal สไตล์ Strava (1080x1920, 1080x1080, โปร่งใส) + โลโก้ + #PassportAI
 6. /dev : ลิงก์ไปทุกหน้าด้วย mock data

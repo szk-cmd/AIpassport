@@ -1,9 +1,12 @@
 // เนื้อหาการ์ดแต่ละใบใน /t/[slug] ขนาดทุกอย่างใช้ cqw (% ของความกว้างการ์ด) จึงย่อ/ขยายตามจอ
+import Link from "next/link";
 import { Photo } from "@/components/Photo";
+import { QrCode } from "@/components/QrCode";
 import { RouteLine } from "@/components/RouteMap";
 import { CATEGORY_LABELS, formatBaht, formatDate, formatDateRange } from "@/lib/format";
 import { getPhoto } from "@/lib/mock";
 import type { DayStory, ExpenseCategory, TripSummary } from "@/lib/types";
+import { CopyLinkButton } from "./CopyLinkButton";
 import { seeded, Stamp, STAMP_COLORS } from "./Stamp";
 
 // ---------- 1) ปก ----------
@@ -221,6 +224,40 @@ export function PlacesCard({ s }: { s: TripSummary }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ---------- 6) แชร์ ----------
+export function ShareCard({ s, slug }: { s: TripSummary; slug: string }) {
+  const path = `/t/${slug}`;
+  const buttonClass =
+    "flex items-center justify-center rounded-full py-[3.5cqw] text-[4.2cqw] font-heading font-semibold transition";
+
+  return (
+    <div className="flex h-full flex-col items-center p-[7cqw] text-center">
+      <CardLabel>แชร์ทริป</CardLabel>
+      <h2 className="text-[7cqw] font-bold">{s.title}</h2>
+
+      <div className="my-auto flex flex-col items-center py-[4cqw]">
+        <div className="w-[56cqw] rounded-[5cqw] bg-white p-[3cqw] shadow-md">
+          <QrCode path={path} size={300} fluid light="#FFFFFF" />
+        </div>
+        <p className="mt-[3cqw] text-[3.8cqw] text-brown/65">ให้เพื่อนสแกนเพื่อเปิดทริปนี้</p>
+      </div>
+
+      <div className="grid w-full gap-[3cqw]">
+        <CopyLinkButton path={path} className={`${buttonClass} bg-orange text-cream hover:brightness-110`} />
+        <div className="grid grid-cols-2 gap-[3cqw]">
+          <Link href={`${path}/social`} className={`${buttonClass} border-2 border-brown/15 hover:bg-brown/5`}>
+            📱 การ์ดโซเชียล
+          </Link>
+          <Link href={`${path}/print`} className={`${buttonClass} border-2 border-brown/15 hover:bg-brown/5`}>
+            🖼 กรอบรูป
+          </Link>
+        </div>
+      </div>
+      <p className="mt-[5cqw] font-heading text-[3.4cqw] tracking-wider text-brown/45">#PassportAI</p>
     </div>
   );
 }
