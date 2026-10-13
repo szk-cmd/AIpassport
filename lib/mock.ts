@@ -1,3 +1,4 @@
+import { KYOTO_PHOTOS, KYOTO_SUMMARY, PHUKET_PHOTOS, PHUKET_SUMMARY } from "./mock-trips";
 import type { ExpenseLine, Trip, TripItem, TripSummary } from "./types";
 
 // ทริปตัวอย่าง "เชียงใหม่ 3 วัน" ใช้ทุกหน้าตอนยังไม่ต่อ Supabase / AI
@@ -286,7 +287,20 @@ export const MOCK_SUMMARY: TripSummary = {
   share: { slug: MOCK_SLUG },
 };
 
+// ทุกทริปที่เคยสร้าง เรียงจากใหม่ไปเก่า (ของจริงจะอ่าน trip id จาก localStorage แล้วดึงจาก DB)
+export const MOCK_TRIPS: { slug: string; summary: TripSummary }[] = [
+  { slug: MOCK_SLUG, summary: MOCK_SUMMARY },
+  { slug: "phuket-3-days", summary: PHUKET_SUMMARY },
+  { slug: "kyoto-3-days", summary: KYOTO_SUMMARY },
+];
+
+export function getTripBySlug(slug: string) {
+  return MOCK_TRIPS.find((t) => t.slug === slug);
+}
+
+const ALL_PHOTOS = [...MOCK_ITEMS, ...PHUKET_PHOTOS, ...KYOTO_PHOTOS];
+
 export function getPhoto(id: string) {
-  const item = MOCK_ITEMS.find((i) => i.id === id);
+  const item = ALL_PHOTOS.find((i) => i.id === id);
   return item?.type === "photo" ? item : undefined;
 }
