@@ -3,21 +3,41 @@ import Link from "next/link";
 import { Photo } from "@/components/Photo";
 import { RouteLine } from "@/components/RouteMap";
 import { formatDateRange } from "@/lib/format";
-import { getPhoto, MOCK_SLUG, MOCK_SUMMARY } from "@/lib/mock";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { getPhoto, getTripBySlug, MOCK_TRIPS } from "@/lib/mock";
 import type { TripSummary } from "@/lib/types";
 
-export const metadata: Metadata = { title: `การ์ดโซเชียล ${MOCK_SUMMARY.title} – PassportAI` };
+export function generateStaticParams() {
+  return MOCK_TRIPS.map((t) => ({ slug: t.slug }));
+}
+
+export async function generateMetadata({ params }: PageProps<"/t/[slug]/social">): Promise<Metadata> {
+  const trip = getTripBySlug((await params).slug);
+  return { title: `การ์ดโซเชียล ${trip?.summary.title ?? ""} – PassportAI` };
+}
 
 // การ์ดออกแบบที่ขนาดจริง (px) แล้วย่อด้วย CSS เพื่อแสดงตัวอย่างบนจอ
 const PREVIEW_SCALE = 0.3;
 
-// MOCK: ยังไม่อ่าน slug จาก URL ใช้ทริปตัวอย่างเสมอ
-export default function SocialPage() {
-  const s = MOCK_SUMMARY;
+export default function SocialPage({ params }: PageProps<"/t/[slug]/social">) {
+  // อ่าน slug จาก URL อยู่ใน Suspense ตามกฎของ Next 16
+  return (
+    <Suspense>
+      <SocialContent params={params} />
+    </Suspense>
+  );
+}
+
+async function SocialContent({ params }: { params: PageProps<"/t/[slug]/social">["params"] }) {
+  const { slug } = await params;
+  const trip = getTripBySlug(slug); // MOCK: ของจริงจะดึงจาก DB
+  if (!trip) notFound();
+  const s = trip.summary;
 
   return (
     <main className="mx-auto w-full max-w-md px-4 py-8">
-      <Link href={`/t/${MOCK_SLUG}`} className="text-sm text-cream/70 hover:text-cream">
+      <Link href={`/t/${slug}`} className="text-sm text-cream/70 hover:text-cream">
         ← กลับหน้าทริป
       </Link>
       <h1 className="mt-2 text-2xl font-semibold">การ์ดโซเชียล</h1>

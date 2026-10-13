@@ -4,9 +4,18 @@ import { Photo } from "@/components/Photo";
 import { PrintButton } from "@/components/PrintButton";
 import { QrCode } from "@/components/QrCode";
 import { formatDateRange } from "@/lib/format";
-import { getPhoto, MOCK_SLUG, MOCK_SUMMARY } from "@/lib/mock";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { getPhoto, getTripBySlug, MOCK_TRIPS } from "@/lib/mock";
 
-export const metadata: Metadata = { title: `กรอบรูป ${MOCK_SUMMARY.title} – PassportAI` };
+export function generateStaticParams() {
+  return MOCK_TRIPS.map((t) => ({ slug: t.slug }));
+}
+
+export async function generateMetadata({ params }: PageProps<"/t/[slug]/print">): Promise<Metadata> {
+  const trip = getTripBySlug((await params).slug);
+  return { title: `กรอบรูป ${trip?.summary.title ?? ""} – PassportAI` };
+}
 
 // ตั้งค่ากระดาษ A4 แนวตั้ง และซ่อนทุกอย่างยกเว้นแผ่นกรอบรูปตอนพิมพ์
 const printCss = `
@@ -20,9 +29,20 @@ const printCss = `
 }
 `;
 
-// MOCK: ยังไม่อ่าน slug จาก URL ใช้ทริปตัวอย่างเสมอ
-export default function PrintPage() {
-  const s = MOCK_SUMMARY;
+export default function PrintPage({ params }: PageProps<"/t/[slug]/print">) {
+  // อ่าน slug จาก URL อยู่ใน Suspense ตามกฎของ Next 16
+  return (
+    <Suspense>
+      <PrintContent params={params} />
+    </Suspense>
+  );
+}
+
+async function PrintContent({ params }: { params: PageProps<"/t/[slug]/print">["params"] }) {
+  const { slug } = await params;
+  const trip = getTripBySlug(slug); // MOCK: ของจริงจะดึงจาก DB
+  if (!trip) notFound();
+  const s = trip.summary;
   const [main, ...rest] = s.print.photo_ids.map(getPhoto);
 
   return (
@@ -30,7 +50,7 @@ export default function PrintPage() {
       <style>{printCss}</style>
 
       <div className="no-print mb-6">
-        <Link href={`/t/${MOCK_SLUG}`} className="text-sm text-cream/70 hover:text-cream">
+        <Link href={`/t/${slug}`} className="text-sm text-cream/70 hover:text-cream">
           ← กลับหน้าทริป
         </Link>
         <h1 className="mt-2 text-2xl font-semibold">กรอบรูปสำหรับพิมพ์</h1>
@@ -74,7 +94,7 @@ export default function PrintPage() {
                   เรื่องราวทั้งหมด
                 </p>
                 <div className="w-[16cqw]">
-                  <QrCode path={`/t/${MOCK_SLUG}`} size={300} fluid />
+                  <QrCode path={`/t/${slug}`} size={300} fluid />
                 </div>
               </div>
             </div>

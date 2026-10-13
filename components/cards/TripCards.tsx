@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { Photo } from "@/components/Photo";
 import { QrCode } from "@/components/QrCode";
-import { RouteLine } from "@/components/RouteMap";
+import { RouteLine, RouteMap } from "@/components/RouteMap";
 import { CATEGORY_LABELS, formatBaht, formatDate, formatDateRange } from "@/lib/format";
 import { getPhoto } from "@/lib/mock";
 import type { DayStory, ExpenseCategory, TripSummary } from "@/lib/types";
@@ -10,7 +10,7 @@ import { CopyLinkButton } from "./CopyLinkButton";
 import { seeded, Stamp, STAMP_COLORS } from "./Stamp";
 
 // ---------- 1) ปก ----------
-export function CoverCard({ s }: { s: TripSummary }) {
+export function CoverCard({ s, hint = true }: { s: TripSummary; hint?: boolean }) {
   const cover = getPhoto(s.cover_photo_id);
   return (
     <div className="relative h-full text-cream">
@@ -33,7 +33,9 @@ export function CoverCard({ s }: { s: TripSummary }) {
         <p className="text-[3.4cqw] tracking-[0.35em] text-cream/75">TRIP SUMMARY</p>
         <h1 className="mt-[1cqw] text-[11cqw] leading-tight font-bold">{s.title}</h1>
         <p className="mt-[1cqw] text-[4.6cqw] text-cream/85">{formatDateRange(s.start_date, s.end_date)}</p>
-        <p className="mt-[6cqw] text-[3.6cqw] text-gold">← ปัดซ้ายเพื่อเปิดดูทริป</p>
+        <p className="mt-[6cqw] text-[3.6cqw] text-gold">
+          {hint ? "← ปัดซ้ายเพื่อเปิดดูทริป" : "เลื่อนลงเพื่อดูทริป ↓"}
+        </p>
       </div>
     </div>
   );
@@ -258,6 +260,19 @@ export function ShareCard({ s, slug }: { s: TripSummary; slug: string }) {
         </div>
       </div>
       <p className="mt-[5cqw] font-heading text-[3.4cqw] tracking-wider text-brown/45">#PassportAI</p>
+    </div>
+  );
+}
+
+// ---------- แผนที่เส้นทาง (หน้าทริปแบบเลื่อนลง) ----------
+export function MapCard({ s }: { s: TripSummary }) {
+  return (
+    <div className="p-[7cqw]">
+      <CardLabel>เส้นทาง</CardLabel>
+      <h2 className="mb-[4cqw] text-[7cqw] font-bold">
+        {s.route.length} จุด · {s.stats.distance_km} กม.
+      </h2>
+      <RouteMap route={s.route} />
     </div>
   );
 }
