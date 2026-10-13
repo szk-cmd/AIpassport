@@ -4,7 +4,7 @@ import { RouteLine } from "@/components/RouteMap";
 import { CATEGORY_LABELS, formatBaht, formatDate, formatDateRange } from "@/lib/format";
 import { getPhoto } from "@/lib/mock";
 import type { DayStory, ExpenseCategory, TripSummary } from "@/lib/types";
-import { Stamp, STAMP_COLORS } from "./Stamp";
+import { seeded, Stamp, STAMP_COLORS } from "./Stamp";
 
 // ---------- 1) ปก ----------
 export function CoverCard({ s }: { s: TripSummary }) {
@@ -174,6 +174,52 @@ export function ExpensesCard({ s }: { s: TripSummary }) {
       <div className="flex items-baseline justify-between border-t-2 border-dashed border-brown/20 pt-[4cqw] font-heading">
         <span className="text-[4.5cqw] font-semibold">รวมทั้งทริป</span>
         <span className="text-[6cqw] font-bold">{formatBaht(total)}</span>
+      </div>
+    </div>
+  );
+}
+
+// ---------- 5) สถานที่ทั้งหมด ----------
+export function PlacesCard({ s }: { s: TripSummary }) {
+  const rows = Math.ceil(s.route.length / 2);
+
+  // หาวันที่ไปแต่ละที่ (ชื่อใน route กับในเรื่องเล่าอาจสั้นยาวต่างกัน)
+  const visitedOn = (name: string) =>
+    s.days.find((d) => d.places.some((p) => p.includes(name) || name.includes(p)))?.date;
+
+  return (
+    <div className="flex h-full flex-col p-[7cqw]">
+      <CardLabel>สถานที่ทั้งหมด</CardLabel>
+      <h2 className="text-[7cqw] font-bold">
+        ไปมาแล้ว <span className="text-orange">{s.route.length}</span> ที่
+      </h2>
+
+      {/* วางเป็นตาราง 2 คอลัมน์ แล้วขยับ/เอียงแต่ละอันแบบสุ่มคงที่ ให้ดูเหมือนประทับมือ */}
+      <div className="relative mt-[3cqw] flex-1">
+        {s.route.map((p, i) => {
+          const col = i % 2;
+          const row = Math.floor(i / 2);
+          const date = visitedOn(p.name);
+          const jitterX = seeded(p.name, 1) * 10 - 5;
+          const jitterY = seeded(p.name, 2) * 6 - 3;
+          // แถวสุดท้ายที่มีอันเดียวให้อยู่กลาง
+          const alone = i === s.route.length - 1 && s.route.length % 2 === 1;
+          return (
+            <Stamp
+              key={p.name}
+              label={p.name}
+              sub={date ? formatDate(date) : undefined}
+              shape={seeded(p.name, 4) > 0.5 ? "circle" : "rect"}
+              color={STAMP_COLORS[i % 2]}
+              rotate={Math.round(seeded(p.name, 5) * 30 - 15)}
+              className="absolute w-[46%]"
+              style={{
+                left: `${(alone ? 27 : col * 52) + jitterX}%`,
+                top: `${(row / rows) * 100 + jitterY}%`,
+              }}
+            />
+          );
+        })}
       </div>
     </div>
   );

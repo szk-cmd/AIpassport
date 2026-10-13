@@ -16,9 +16,10 @@ type Props = {
   color?: string;
   rotate?: number; // องศา ถ้าไม่ระบุจะสุ่มจากชื่อ (-12..12)
   className?: string;
+  style?: React.CSSProperties;
 };
 
-export function Stamp({ label, sub, shape = "circle", color = STAMP_COLORS[0], rotate, className = "" }: Props) {
+export function Stamp({ label, sub, shape = "circle", color = STAMP_COLORS[0], rotate, className = "", style }: Props) {
   const angle = rotate ?? Math.round(seeded(label) * 24 - 12);
   const id = `ink-${Math.round(seeded(label, 7) * 1e6)}`;
   // ชื่อยาวให้ตัวเล็กลง จะได้ไม่ล้นตรา
@@ -28,7 +29,7 @@ export function Stamp({ label, sub, shape = "circle", color = STAMP_COLORS[0], r
     <svg
       viewBox={shape === "circle" ? "0 0 200 200" : "0 0 240 160"}
       className={className}
-      style={{ transform: `rotate(${angle}deg)`, color }}
+      style={{ ...style, transform: `rotate(${angle}deg)`, color }}
       role="img"
       aria-label={`ตราประทับ ${label}`}
     >
