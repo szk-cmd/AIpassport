@@ -32,7 +32,7 @@ export default function HomePage() {
       {/* ---------- ปุ่มเริ่ม ---------- */}
       <div className="mt-8 w-full space-y-3">
         <Link
-          href="/plan"
+          href="/trips"
           className="block w-full rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream shadow-lg transition hover:brightness-110"
         >
           ลองใช้งานเลย ไม่ต้องสมัคร

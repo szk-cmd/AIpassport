@@ -11,11 +11,13 @@ const GROUPS = [
     title: "Flow ผู้ใช้",
     links: [
       { href: "/", label: "0. หน้าแรก", note: "/" },
-      { href: "/plan", label: "1. เลือกแพ็กเกจ", note: "/plan" },
-      { href: "/new?plan=free", label: "2. เริ่มทริปใหม่", note: "/new" },
-      { href: `/trip/${id}/confirm`, label: "3. ตรวจสอบข้อมูล", note: "/trip/[id]/confirm" },
-      { href: `/trip/${id}/progress`, label: "4. กำลังสร้าง", note: "/trip/[id]/progress" },
-      { href: `/trip/${id}/review`, label: "5. ตรวจทาน", note: "/trip/[id]/review" },
+      { href: "/trips", label: "1. ทริปของคุณ", note: "/trips" },
+      { href: "/trips?demo=empty", label: "1b. ทริปของคุณ (ยังไม่มีทริป)", note: "/trips?demo=empty" },
+      { href: "/plan", label: "2. เลือกแพ็กเกจ", note: "/plan" },
+      { href: "/new?plan=free", label: "3. เริ่มทริปใหม่", note: "/new" },
+      { href: `/trip/${id}/confirm`, label: "4. ตรวจสอบข้อมูล", note: "/trip/[id]/confirm" },
+      { href: `/trip/${id}/progress`, label: "5. กำลังสร้าง", note: "/trip/[id]/progress" },
+      { href: `/trip/${id}/review`, label: "6. ตรวจทาน", note: "/trip/[id]/review" },
     ],
   },
   {
