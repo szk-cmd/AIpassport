@@ -1,10 +1,10 @@
 // เนื้อหาการ์ดแต่ละใบใน /t/[slug] ขนาดทุกอย่างใช้ cqw (% ของความกว้างการ์ด) จึงย่อ/ขยายตามจอ
 import { Photo } from "@/components/Photo";
 import { RouteLine } from "@/components/RouteMap";
-import { formatBaht, formatDateRange } from "@/lib/format";
+import { formatBaht, formatDate, formatDateRange } from "@/lib/format";
 import { getPhoto } from "@/lib/mock";
-import type { TripSummary } from "@/lib/types";
-import { Stamp } from "./Stamp";
+import type { DayStory, TripSummary } from "@/lib/types";
+import { Stamp, STAMP_COLORS } from "./Stamp";
 
 // ---------- 1) ปก ----------
 export function CoverCard({ s }: { s: TripSummary }) {
@@ -78,6 +78,43 @@ export function StatsCard({ s }: { s: TripSummary }) {
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------- 3) รายวัน ----------
+export function DayCard({ day, index }: { day: DayStory; index: number }) {
+  const place = day.places[0] ?? "";
+  const photos = day.photo_ids.slice(0, 2).map(getPhoto).filter((p) => p !== undefined);
+
+  return (
+    <div className="relative flex h-full flex-col p-[7cqw]">
+      <CardLabel>{formatDate(day.date)}</CardLabel>
+      <h2 className="text-[7.5cqw] leading-tight font-bold">
+        <span className="text-orange">DAY {index + 1}</span> · {place}
+      </h2>
+
+      <div className={`mt-[4cqw] grid gap-[2.5cqw] ${photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+        {photos.map((p) => (
+          <Photo
+            key={p.id}
+            photo={p}
+            showCaption
+            className={`rounded-[4cqw] ${photos.length > 1 ? "aspect-[3/4]" : "aspect-[4/3]"} [&_p]:text-[3.2cqw]`}
+          />
+        ))}
+      </div>
+
+      <p className="mt-[4cqw] line-clamp-6 text-[4.1cqw] leading-relaxed text-brown/85">{day.story}</p>
+      <p className="mt-auto pr-[30cqw] text-[3.3cqw] text-brown/55">📍 {day.places.join(" · ")}</p>
+
+      <Stamp
+        label={place}
+        sub={formatDate(day.date)}
+        shape={index % 2 === 0 ? "circle" : "rect"}
+        color={STAMP_COLORS[index % 2]}
+        className="pointer-events-none absolute right-[4cqw] bottom-[4cqw] w-[32cqw]"
+      />
     </div>
   );
 }
