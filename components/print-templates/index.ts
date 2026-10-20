@@ -1,5 +1,6 @@
 import type { TripSummary } from "@/lib/types";
 import { Classic } from "./Classic";
+import { Passport } from "./Passport";
 import { Polaroid } from "./Polaroid";
 import { aiPhotoIds, MAX_TEXT_LENGTH, type TemplateProps } from "./shared";
 
@@ -9,6 +10,7 @@ export { aiPhotoIds, MAX_TEXT_LENGTH, type TemplateProps };
 export const TEMPLATES = [
   { id: "classic", name: "คลาสสิก", Component: Classic },
   { id: "polaroid", name: "โพลารอยด์", Component: Polaroid },
+  { id: "passport", name: "พาสปอร์ต", Component: Passport },
 ] as const satisfies readonly {
   id: string;
   name: string;
