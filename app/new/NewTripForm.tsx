@@ -33,6 +33,12 @@ export function NewTripForm() {
 
   const dateError = startDate && endDate && endDate < startDate;
   const canSubmit = title.trim() !== "" && startDate !== "" && endDate !== "" && !dateError;
+  // บอกผู้ใช้ว่ายังขาดอะไร ปุ่มจะได้ไม่จางเฉยๆ
+  const missing = [
+    title.trim() === "" && "ชื่อทริป",
+    (startDate === "" || endDate === "") &&
+      (groups.length > 0 ? "วันที่ (กด “ใช่ ทริปนี้” บนการ์ด หรือกรอกเอง)" : "วันเริ่ม-วันจบ"),
+  ].filter(Boolean);
 
   function handleAdd(added: PreparedFile[]) {
     setFiles((prev) => [...prev, ...added]);
@@ -138,6 +144,7 @@ export function NewTripForm() {
         >
           สร้างหนังสือเดินทาง
         </button>
+        {missing.length > 0 && <p className="text-center text-sm text-orange">ยังขาด: {missing.join(" · ")}</p>}
         <p className="text-center text-xs text-brown/50">
           โหมดตัวอย่าง: ระบบจะใช้ข้อมูลทริปเชียงใหม่แทนไฟล์ที่เลือก
         </p>
