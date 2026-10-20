@@ -11,7 +11,7 @@ export default function PlanPage() {
         ← ทริปของคุณ
       </Link>
       <h1 className="mt-2 text-3xl font-semibold">เลือกแพ็กเกจ</h1>
-      <p className="mt-2 text-cream/70">จ่ายต่อ 1 ทริป ไม่มีรายเดือน ช่วงทดลองเปิดให้ใช้แพ็กเกจฟรีก่อน</p>
+      <p className="mt-2 text-cream/70">อัปโหลดรูปได้ไม่จำกัดทุกแพ็กเกจ ช่วงทดลองเปิดให้ใช้แพ็กเกจฟรีก่อน</p>
       <PlanForm />
     </main>
   );

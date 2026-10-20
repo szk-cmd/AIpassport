@@ -69,7 +69,7 @@ export function NewTripForm() {
         <div>
           <p className="text-xs text-cream/60">แพ็กเกจ</p>
           <p className="font-heading font-semibold">
-            {plan.name} <span className="text-gold">· AI คัดเข้าเล่ม {plan.maxPhotos} รูป</span>
+            {plan.name} <span className="text-gold">· AI คัดเข้าพาสปอร์ต {plan.aiPhotos} รูป</span>
           </p>
         </div>
         <Link href="/plan" className="text-sm text-cream/70 underline hover:text-cream">
