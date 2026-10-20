@@ -258,6 +258,9 @@ export function ShareCard({ s, slug }: { s: TripSummary; slug: string }) {
             🖼 กรอบรูป
           </Link>
         </div>
+        <Link href={`${path}/order`} className={`${buttonClass} border-2 border-brown/15 hover:bg-brown/5`}>
+          🖨 สั่งพิมพ์เป็นกรอบรูป
+        </Link>
       </div>
       <p className="mt-[5cqw] font-heading text-[3.4cqw] tracking-wider text-brown/45">#PassportAI</p>
     </div>

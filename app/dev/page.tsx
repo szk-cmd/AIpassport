@@ -26,6 +26,7 @@ const GROUPS = [
       { href: `/t/${MOCK_SLUG}`, label: "Digital History", note: "/t/[slug]" },
       { href: `/t/${MOCK_SLUG}/print`, label: "กรอบรูป A4", note: "/t/[slug]/print" },
       { href: `/t/${MOCK_SLUG}/social`, label: "การ์ดโซเชียล", note: "/t/[slug]/social" },
+      { href: `/t/${MOCK_SLUG}/order`, label: "สั่งพิมพ์กรอบรูป", note: "/t/[slug]/order" },
     ],
   },
   {

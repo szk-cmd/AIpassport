@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 import { Photo } from "@/components/Photo";
 import { CATEGORY_LABELS, formatBaht, formatDate } from "@/lib/format";
@@ -11,10 +11,10 @@ const fieldClass =
   "w-full rounded-lg border border-brown/15 bg-white px-3 py-2 text-brown outline-none focus:border-orange";
 
 export function ReviewForm() {
-  const router = useRouter();
   // MOCK: เก็บการแก้ไขไว้ใน state ของหน้านี้เท่านั้น ยังไม่บันทึกลง DB
   const [summary, setSummary] = useState<TripSummary>(MOCK_SUMMARY);
   const [saving, setSaving] = useState(false);
+  const [done, setDone] = useState(false);
 
   const total = summary.expenses.items.reduce((sum, e) => sum + e.amount, 0);
 
@@ -38,8 +38,10 @@ export function ReviewForm() {
   function handleConfirm() {
     setSaving(true);
     // MOCK: ของจริงจะบันทึก summary แล้วเรียก agent 05 สร้าง slug + QR
-    setTimeout(() => router.push(`/t/${MOCK_SLUG}`), 800);
+    setTimeout(() => setDone(true), 800);
   }
+
+  if (done) return <ReadyScreen slug={MOCK_SLUG} title={summary.title} />;
 
   return (
     <main className="mx-auto w-full max-w-md px-4 pt-8 pb-28">
@@ -135,6 +137,33 @@ export function ReviewForm() {
         >
           {saving ? "กำลังสร้างหนังสือเดินทาง..." : "ยืนยัน สร้างหนังสือเดินทาง"}
         </button>
+      </div>
+    </main>
+  );
+}
+
+// หลังยืนยัน: ไปดูพาสปอร์ตเป็นทางหลัก สั่งพิมพ์เป็นทางเลือก ไม่บังคับ
+function ReadyScreen({ slug, title }: { slug: string; title: string }) {
+  return (
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-4 py-8 text-center">
+      <span className="text-6xl" aria-hidden>
+        🛂
+      </span>
+      <h1 className="mt-4 text-3xl font-semibold">พาสปอร์ตพร้อมแล้ว</h1>
+      <p className="mt-2 text-cream/70">{title}</p>
+      <div className="mt-8 grid w-full gap-3">
+        <Link
+          href={`/t/${slug}`}
+          className="rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream"
+        >
+          ดูพาสปอร์ต
+        </Link>
+        <Link
+          href={`/t/${slug}/order`}
+          className="rounded-full border-2 border-cream/30 py-3 font-heading font-semibold hover:bg-cream/10"
+        >
+          🖨 สั่งพิมพ์กรอบรูป
+        </Link>
       </div>
     </main>
   );
