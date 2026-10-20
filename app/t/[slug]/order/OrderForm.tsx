@@ -2,6 +2,18 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Photo } from "@/components/Photo";
+import {
+  aiPhotoIds,
+  defaultPrintOptions,
+  getTemplate,
+  MAX_TEXT_LENGTH,
+  printHref,
+  TEMPLATES,
+  type PrintOptions,
+} from "@/components/print-templates";
+import { getPhoto } from "@/lib/mock";
+import type { TripSummary } from "@/lib/types";
 
 // ราคายังไม่ได้ตั้ง ใส่ [฿__] ไว้ก่อน
 const SIZES = [
@@ -15,43 +27,150 @@ const FRAMES = [
   { id: "white", label: "ขาว", color: "#FDFBF7" },
 ] as const;
 
-type Props = { slug: string; children: React.ReactNode };
+type Props = { s: TripSummary; slug: string };
 
-// เลือกขนาด + สีกรอบ ดูตัวอย่างสด ยังไม่มีระบบจ่ายเงิน
-export function OrderForm({ slug, children }: Props) {
+// ขั้น 1 เลือก template + แก้ข้อความ/รูปเด่น → ขั้น 2 เลือกขนาด/กรอบ ยังไม่มีระบบจ่ายเงิน
+export function OrderForm({ s, slug }: Props) {
+  const [step, setStep] = useState<1 | 2>(1);
+  const [options, setOptions] = useState<PrintOptions>(() => defaultPrintOptions(s));
   const [sizeId, setSizeId] = useState<(typeof SIZES)[number]["id"]>("a4");
   const [frameId, setFrameId] = useState<(typeof FRAMES)[number]["id"]>("wood");
   const [comingSoon, setComingSoon] = useState(false);
-  const size = SIZES.find((s) => s.id === sizeId)!;
-  const frame = FRAMES.find((f) => f.id === frameId)!;
+  const size = SIZES.find((x) => x.id === sizeId)!;
+  const frame = FRAMES.find((x) => x.id === frameId)!;
+  const template = getTemplate(options.template);
+  const update = (change: Partial<PrintOptions>) => setOptions((o) => ({ ...o, ...change }));
+
+  const preview = <template.Component s={s} slug={slug} text={options.text} heroId={options.heroId} />;
 
   const optionClass = (on: boolean) =>
     `rounded-xl border-2 px-3 py-2 text-left transition ${
       on ? "border-orange bg-orange/10" : "border-brown/15 bg-white hover:border-orange/50"
     }`;
 
+  if (step === 1) {
+    return (
+      <div className="mt-6 space-y-5">
+        <p className="font-heading text-sm tracking-widest text-gold">ขั้นที่ 1 จาก 2 · เลือกแบบ</p>
+
+        {/* แถบตัวอย่างทุกแบบ ใช้ข้อมูลทริปจริง เลื่อนแนวนอน */}
+        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+          {TEMPLATES.map((t) => {
+            const on = t.id === options.template;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => update({ template: t.id })}
+                aria-pressed={on}
+                className="w-24 shrink-0 snap-start text-center"
+              >
+                <div
+                  className={`pointer-events-none overflow-hidden rounded-md ring-offset-2 ring-offset-brown ${
+                    on ? "ring-3 ring-orange" : "opacity-75"
+                  }`}
+                  aria-hidden
+                >
+                  <t.Component s={s} slug={slug} text={options.text} heroId={options.heroId} />
+                </div>
+                <span className={`mt-2 block text-sm ${on ? "font-semibold text-orange" : "text-cream/70"}`}>
+                  {t.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mx-auto w-full shadow-2xl">{preview}</div>
+
+        <section className="space-y-5 rounded-2xl bg-cream p-5 text-brown">
+          <label className="block">
+            <span className="font-medium">ข้อความบนกรอบรูป</span>
+            <textarea
+              rows={3}
+              maxLength={MAX_TEXT_LENGTH}
+              value={options.text}
+              onChange={(e) => update({ text: e.target.value })}
+              className="mt-1 w-full rounded-xl border border-brown/20 bg-white px-4 py-3 leading-relaxed outline-none focus:border-orange"
+            />
+            <span className="block text-right text-xs text-brown/50">
+              {options.text.length}/{MAX_TEXT_LENGTH} · สั้นๆ 2-3 บรรทัด อ่านง่าย
+            </span>
+          </label>
+
+          <div>
+            <p className="font-medium">รูปเด่น</p>
+            <p className="text-xs text-brown/60">เลือกจากรูปที่ AI คัดไว้</p>
+            <div className="mt-2 grid grid-cols-5 gap-1.5">
+              {aiPhotoIds(s).map((id) => {
+                const photo = getPhoto(id);
+                if (!photo) return null;
+                const on = id === options.heroId;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => update({ heroId: id })}
+                    aria-pressed={on}
+                    aria-label={photo.data.caption}
+                    className={`overflow-hidden rounded-md ${on ? "ring-3 ring-orange" : "opacity-70 hover:opacity-100"}`}
+                  >
+                    <Photo photo={photo} hidePlace className="aspect-square" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setStep(2)}
+            className="w-full rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream"
+          >
+            ถัดไป เลือกขนาดและกรอบ
+          </button>
+          <Link
+            href={printHref(slug, options)}
+            className="block text-center text-sm text-brown/60 underline hover:text-orange"
+          >
+            ⬇ ดาวน์โหลด PDF ไปพิมพ์เอง
+          </Link>
+        </section>
+
+        <SkipLink slug={slug} />
+      </div>
+    );
+  }
+
   return (
     <div className="mt-6 space-y-6">
-      {/* ตัวอย่างกรอบรูป: เอาแผ่นจากหน้า print มาใส่กรอบตามสีที่เลือก */}
+      <div className="flex items-baseline justify-between">
+        <p className="font-heading text-sm tracking-widest text-gold">ขั้นที่ 2 จาก 2 · ขนาดและกรอบ</p>
+        <button type="button" onClick={() => setStep(1)} className="text-sm text-cream/70 underline hover:text-cream">
+          ← เปลี่ยนแบบ
+        </button>
+      </div>
+
+      {/* ตัวอย่างกรอบรูป: template ที่เลือกในขั้น 1 ใส่กรอบตามสีที่เลือก */}
       <div className="mx-auto w-4/5 p-[5%] shadow-2xl" style={{ background: frame.color }}>
-        <div className="shadow-inner">{children}</div>
+        <div className="shadow-inner">{preview}</div>
       </div>
 
       <section className="space-y-5 rounded-2xl bg-cream p-5 text-brown">
         <div>
           <p className="font-medium">ขนาด</p>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            {SIZES.map((s) => (
+            {SIZES.map((x) => (
               <button
-                key={s.id}
+                key={x.id}
                 type="button"
-                onClick={() => setSizeId(s.id)}
-                aria-pressed={s.id === sizeId}
-                className={optionClass(s.id === sizeId)}
+                onClick={() => setSizeId(x.id)}
+                aria-pressed={x.id === sizeId}
+                className={optionClass(x.id === sizeId)}
               >
-                <span className="block font-heading font-semibold">{s.label}</span>
-                <span className="block text-xs text-brown/60">{s.note}</span>
-                <span className="mt-1 block text-sm font-semibold text-orange">{s.price}</span>
+                <span className="block font-heading font-semibold">{x.label}</span>
+                <span className="block text-xs text-brown/60">{x.note}</span>
+                <span className="mt-1 block text-sm font-semibold text-orange">{x.price}</span>
               </button>
             ))}
           </div>
@@ -60,16 +179,16 @@ export function OrderForm({ slug, children }: Props) {
         <div>
           <p className="font-medium">สีกรอบ</p>
           <div className="mt-2 grid grid-cols-3 gap-2">
-            {FRAMES.map((f) => (
+            {FRAMES.map((x) => (
               <button
-                key={f.id}
+                key={x.id}
                 type="button"
-                onClick={() => setFrameId(f.id)}
-                aria-pressed={f.id === frameId}
-                className={`${optionClass(f.id === frameId)} flex flex-col items-center`}
+                onClick={() => setFrameId(x.id)}
+                aria-pressed={x.id === frameId}
+                className={`${optionClass(x.id === frameId)} flex flex-col items-center`}
               >
-                <span className="size-8 rounded-full border border-brown/20" style={{ background: f.color }} />
-                <span className="mt-1 text-sm">{f.label}</span>
+                <span className="size-8 rounded-full border border-brown/20" style={{ background: x.color }} />
+                <span className="mt-1 text-sm">{x.label}</span>
               </button>
             ))}
           </div>
@@ -77,7 +196,7 @@ export function OrderForm({ slug, children }: Props) {
 
         <div className="flex items-baseline justify-between border-t border-brown/15 pt-3">
           <span className="text-sm text-brown/70">
-            {size.label} · กรอบ{frame.label}
+            แบบ{template.name} · {size.label} · กรอบ{frame.label}
           </span>
           <span className="font-heading text-2xl font-semibold text-orange">{size.price}</span>
         </div>
@@ -94,16 +213,22 @@ export function OrderForm({ slug, children }: Props) {
         )}
 
         <Link
-          href={`/t/${slug}/print`}
+          href={printHref(slug, options)}
           className="block w-full rounded-full border-2 border-brown/20 py-3 text-center font-heading font-semibold hover:bg-brown/5"
         >
           ⬇ ดาวน์โหลด PDF ไปพิมพ์เอง
         </Link>
       </section>
 
-      <Link href={`/t/${slug}`} className="block text-center text-sm text-cream/70 underline hover:text-cream">
-        ข้ามไปก่อน กลับไปดูพาสปอร์ต
-      </Link>
+      <SkipLink slug={slug} />
     </div>
+  );
+}
+
+function SkipLink({ slug }: { slug: string }) {
+  return (
+    <Link href={`/t/${slug}`} className="block text-center text-sm text-cream/70 underline hover:text-cream">
+      ข้ามไปก่อน กลับไปดูพาสปอร์ต
+    </Link>
   );
 }

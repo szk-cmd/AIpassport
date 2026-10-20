@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PrintButton } from "@/components/PrintButton";
-import { PrintSheet } from "@/components/PrintSheet";
+import { getTemplate, parsePrintOptions } from "@/components/print-templates";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getTripBySlug, MOCK_TRIPS } from "@/lib/mock";
@@ -27,20 +27,25 @@ const printCss = `
 }
 `;
 
-export default function PrintPage({ params }: PageProps<"/t/[slug]/print">) {
-  // อ่าน slug จาก URL อยู่ใน Suspense ตามกฎของ Next 16
+type Props = PageProps<"/t/[slug]/print">;
+
+export default function PrintPage({ params, searchParams }: Props) {
+  // อ่าน slug และตัวเลือกจาก URL อยู่ใน Suspense ตามกฎของ Next 16
   return (
     <Suspense>
-      <PrintContent params={params} />
+      <PrintContent params={params} searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function PrintContent({ params }: { params: PageProps<"/t/[slug]/print">["params"] }) {
+// template / รูปเด่น / ข้อความ มาจากหน้าสั่งพิมพ์ทาง URL ถ้าไม่มีใช้ค่าตั้งต้น
+async function PrintContent({ params, searchParams }: Pick<Props, "params" | "searchParams">) {
   const { slug } = await params;
   const trip = getTripBySlug(slug); // MOCK: ของจริงจะดึงจาก DB
   if (!trip) notFound();
   const s = trip.summary;
+  const options = parsePrintOptions(s, await searchParams);
+  const { Component } = getTemplate(options.template);
 
   return (
     <main className="print-area mx-auto w-full max-w-2xl px-4 py-8">
@@ -54,7 +59,9 @@ async function PrintContent({ params }: { params: PageProps<"/t/[slug]/print">["
         <p className="mt-1 text-cream/70">กระดาษ A4 แนวตั้ง ตัวอักษรใหญ่ อ่านง่ายสำหรับผู้ใหญ่ที่บ้าน</p>
       </div>
 
-      <PrintSheet s={s} slug={slug} />
+      <div className="mx-auto shadow-2xl print:shadow-none">
+        <Component s={s} slug={slug} text={options.text} heroId={options.heroId} />
+      </div>
 
       <div className="no-print mx-auto mt-6 max-w-md">
         <PrintButton />

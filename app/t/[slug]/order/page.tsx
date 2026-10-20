@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { PrintSheet } from "@/components/PrintSheet";
 import { getTripBySlug, MOCK_TRIPS } from "@/lib/mock";
 import { OrderForm } from "./OrderForm";
 
@@ -37,9 +36,7 @@ async function OrderContent({ params }: { params: PageProps<"/t/[slug]/order">["
       <h1 className="mt-2 text-3xl font-semibold">สั่งพิมพ์กรอบรูป</h1>
       <p className="mt-2 text-cream/70">พิมพ์ใส่กรอบจริง ส่งถึงบ้าน เหมาะเป็นของขวัญให้ผู้ใหญ่</p>
 
-      <OrderForm slug={slug}>
-        <PrintSheet s={trip.summary} slug={slug} />
-      </OrderForm>
+      <OrderForm s={trip.summary} slug={slug} />
     </main>
   );
 }
