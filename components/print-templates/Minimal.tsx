@@ -1,0 +1,27 @@
+import { Photo } from "@/components/Photo";
+import { formatDateRange } from "@/lib/format";
+import { CornerQr, orderedPhotos, Sheet, type TemplateProps } from "./shared";
+
+// มินิมอล: รูปเดียวเต็มกรอบ ชื่อสถานที่และวันที่ตัวบาง แต่ใหญ่และเข้มพออ่านง่าย
+export function Minimal({ s, slug, text, heroId }: TemplateProps) {
+  const [hero] = orderedPhotos(s, heroId);
+
+  return (
+    <Sheet className="bg-white">
+      <div className="flex h-full flex-col p-[6cqw]">
+        {hero && <Photo photo={hero} hidePlace className="min-h-0 flex-1" />}
+
+        <div className="mt-[5cqw] flex shrink-0 items-end justify-between gap-[4cqw]">
+          <div className="min-w-0">
+            <h2 className="font-heading text-[9cqw] leading-tight font-light">{hero?.data.place ?? s.print.headline}</h2>
+            <p className="mt-[0.5cqw] font-heading text-[4.2cqw] font-light tracking-[0.15em]">
+              {formatDateRange(s.start_date, s.end_date)}
+            </p>
+            <p className="mt-[3cqw] line-clamp-3 text-[4.2cqw] leading-snug">{text}</p>
+          </div>
+          <CornerQr slug={slug} light="#FFFFFF" label={false} />
+        </div>
+      </div>
+    </Sheet>
+  );
+}

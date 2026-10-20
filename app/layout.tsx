@@ -6,7 +6,7 @@ import "./globals.css";
 const prompt = Prompt({
   variable: "--font-prompt",
   subsets: ["thai", "latin"],
-  weight: ["500", "600", "700"],
+  weight: ["300", "500", "600", "700"], // 300 ใช้ในกรอบรูปแบบ minimal
 });
 
 // ฟอนต์เนื้อหา
