@@ -8,17 +8,18 @@ create table if not exists trips (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   start_date date,
-  end_date date,
-  -- draft → collecting → processing → awaiting_review → published (หรือ failed)
-  status text not null default 'draft',
-  -- แพ็กเกจ (ดู lib/plans.ts) ตอนนี้เปิดแค่ free
-  plan text not null default 'free' check (plan in ('free', 'plus', 'pro', 'max')),
+  end_date date, -- ขยายได้ถ้าผู้ใช้ต่อทริป
+  -- active → ended → paid → completed (ดู migrations/20261021_trip_status_billing.sql)
+  status text not null default 'active'
+    constraint trips_status_check check (status in ('active', 'ended', 'paid', 'completed')),
+  planned_days integer check (planned_days > 0), -- จำนวนวันตอนสร้าง ใช้คิดราคาแพ็กเกจ
+  ended_at timestamptz,
+  paid_amount integer check (paid_amount >= 0), -- บาท
+  paid_at timestamptz,
   created_at timestamptz not null default now()
 );
 
--- สำหรับฐานข้อมูลที่สร้าง trips ไปแล้วก่อนมีคอลัมน์ plan
-alter table trips add column if not exists plan text not null default 'free'
-  check (plan in ('free', 'plus', 'pro', 'max'));
+-- ฐานข้อมูลที่สร้างไว้ก่อนหน้า: รัน supabase/migrations/ ตามลำดับชื่อไฟล์
 
 create table if not exists trip_items (
   id uuid primary key default gen_random_uuid(),
