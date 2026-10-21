@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { packagePrice, PRICE_PER_DAY } from "@/lib/config";
+import { formatBaht } from "@/lib/format";
 import { activeTrip, dayCount, newId, todayKey, updateStore, useStore } from "@/lib/trip-store";
 
 const inputClass =
@@ -36,6 +38,7 @@ export function StartForm() {
 
   const dateError = startDate && endDate && endDate < startDate;
   const canSubmit = title.trim() !== "" && startDate !== "" && endDate !== "" && !dateError;
+  const days = startDate && endDate && !dateError ? dayCount(startDate, endDate) : null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -110,6 +113,19 @@ export function StartForm() {
           </label>
         </div>
         {dateError && <p className="text-sm text-orange">วันจบต้องไม่อยู่ก่อนวันเริ่ม</p>}
+
+        {/* ราคาประมาณการ: เสนอเป็นแพ็กเกจตามจำนวนวัน ยังไม่เก็บเงิน */}
+        {days && (
+          <div className="rounded-xl bg-teal/10 p-4">
+            <div className="flex items-baseline justify-between">
+              <span className="font-medium">แพ็กเกจ {days} วัน</span>
+              <span className="font-heading text-2xl font-semibold text-teal">{formatBaht(packagePrice(days))}</span>
+            </div>
+            <p className="mt-1 text-sm text-brown/70">
+              ต่อทริปเกินกำหนด คิดเพิ่มวันละ {formatBaht(PRICE_PER_DAY)} · ยังไม่เก็บเงินตอนนี้ ชำระตอนจบทริป
+            </p>
+          </div>
+        )}
 
         <button
           type="submit"

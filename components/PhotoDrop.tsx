@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MAX_FILE_MB } from "@/lib/plans";
+import { MAX_FILE_MB } from "@/lib/config";
 import { fileId, isSupported, prepareAll, type PreparedFile } from "@/lib/photo-prep";
 
 type Props = {

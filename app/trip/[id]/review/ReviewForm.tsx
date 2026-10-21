@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Photo } from "@/components/Photo";
 import { CATEGORY_LABELS, formatBaht, formatDate } from "@/lib/format";
 import { getPhoto, MOCK_SLUG, MOCK_SUMMARY } from "@/lib/mock";
+import { updateTrip } from "@/lib/trip-store";
 import type { DayStory, ExpenseLine, TripSummary } from "@/lib/types";
 
 const fieldClass =
   "w-full rounded-lg border border-brown/15 bg-white px-3 py-2 text-brown outline-none focus:border-orange";
 
 export function ReviewForm() {
+  const { id } = useParams<{ id: string }>();
   // MOCK: เก็บการแก้ไขไว้ใน state ของหน้านี้เท่านั้น ยังไม่บันทึกลง DB
   const [summary, setSummary] = useState<TripSummary>(MOCK_SUMMARY);
   const [saving, setSaving] = useState(false);
@@ -38,6 +41,8 @@ export function ReviewForm() {
   function handleConfirm() {
     setSaving(true);
     // MOCK: ของจริงจะบันทึก summary แล้วเรียก agent 05 สร้าง slug + QR
+    // ตอนนี้ทุกทริปชี้ไปพาสปอร์ตตัวอย่าง
+    updateTrip(id, { status: "completed", slug: MOCK_SLUG });
     setTimeout(() => setDone(true), 800);
   }
 

@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/Logo";
 import { botReply } from "@/lib/chat-bot";
-import { formatDate } from "@/lib/format";
+import { PRICE_PER_DAY } from "@/lib/config";
+import { formatBaht, formatDate } from "@/lib/format";
 import { makeThumb } from "@/lib/photo-prep";
 import {
   addMessages,
   dayCount,
   newId,
   todayKey,
+  updateTrip,
   useStore,
   type ChatMessage,
   type ChatPhoto,
@@ -25,6 +27,7 @@ const MAX_PHOTOS_PER_SEND = 10; // รูปย่อเก็บใน localSto
 // แชทระหว่างเที่ยว: ส่งข้อความ/รูป บอทตอบแบบ MOCK, ☰ เปิดลิ้นชักรายการทริป
 export function ChatView() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const data = useStore();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [text, setText] = useState("");
@@ -60,6 +63,27 @@ export function ChatView() {
     }, 700);
   }
 
+  // ทริปไม่จบเอง ต้องให้ผู้ใช้กดจบเท่านั้น → เพิ่มรูปย้อนหลัง → สรุปค่าบริการ
+  function handleEnd() {
+    if (!window.confirm(`จบทริป “${trip!.title}” เลยไหม? หลังจบจะส่งข้อความเพิ่มไม่ได้แล้ว`)) return;
+    updateTrip(id, { status: "ended", ended_at: new Date().toISOString() });
+    router.push(`/trip/${id}/photos`);
+  }
+
+  // เลยวันจบที่ตั้งไว้: ขยาย end_date ถึงวันนี้ (วันที่เกินจะคิดเพิ่มรายวันตอนจบทริป)
+  function handleExtend() {
+    const today = todayKey();
+    updateTrip(id, { end_date: today });
+    addMessages(id, [
+      {
+        id: newId(),
+        from: "bot",
+        text: `ต่อทริปถึง ${formatDate(today)} แล้ว เที่ยวต่อให้สนุกนะ! วันที่เกินกำหนดคิดเพิ่มวันละ ${formatBaht(PRICE_PER_DAY)}`,
+        at: new Date().toISOString(),
+      },
+    ]);
+  }
+
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
@@ -84,7 +108,7 @@ export function ChatView() {
 
   return (
     <div className="fixed inset-x-0 top-0 flex flex-col bg-brown" style={{ bottom: "var(--nav-h, 0px)" }}>
-      <ChatHeader trip={trip} onMenu={() => setDrawerOpen(true)} />
+      <ChatHeader trip={trip} onMenu={() => setDrawerOpen(true)} onEnd={handleEnd} />
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="mx-auto max-w-md space-y-3">
@@ -94,6 +118,9 @@ export function ChatView() {
               <Bubble message={m} />
             </div>
           ))}
+          {trip.status === "active" && todayKey() > trip.end_date && (
+            <ExtendPrompt trip={trip} onExtend={handleExtend} onEnd={handleEnd} />
+          )}
           <div ref={bottomRef} />
         </div>
       </div>
@@ -154,7 +181,7 @@ export function ChatView() {
   );
 }
 
-function ChatHeader({ trip, onMenu }: { trip: StoredTrip; onMenu: () => void }) {
+function ChatHeader({ trip, onMenu, onEnd }: { trip: StoredTrip; onMenu: () => void; onEnd: () => void }) {
   const total = dayCount(trip.start_date, trip.end_date);
   const day = Math.min(Math.max(dayCount(trip.start_date, todayKey()), 1), total);
 
@@ -175,8 +202,42 @@ function ChatHeader({ trip, onMenu }: { trip: StoredTrip; onMenu: () => void }) 
             {trip.status === "active" ? `กำลังเที่ยว · วันที่ ${day} จาก ${total}` : "จบทริปแล้ว"}
           </p>
         </div>
+        {trip.status === "active" && (
+          <button
+            type="button"
+            onClick={onEnd}
+            className="shrink-0 rounded-full border border-cream/30 px-4 py-2 text-sm font-medium hover:bg-cream/10"
+          >
+            จบทริป
+          </button>
+        )}
       </div>
     </header>
+  );
+}
+
+// บอทถามเมื่อวันนี้เลยวันจบที่ตั้งไว้ (ไม่บันทึกเป็นข้อความ จะหายไปเองเมื่อตอบ)
+function ExtendPrompt({ trip, onExtend, onEnd }: { trip: StoredTrip; onExtend: () => void; onEnd: () => void }) {
+  const extra = dayCount(trip.end_date, todayKey()) - 1;
+  return (
+    <div className="flex items-end gap-2">
+      <div className="shrink-0 rounded-full bg-cream p-1">
+        <LogoMark size={22} />
+      </div>
+      <div className="max-w-[78%] rounded-2xl rounded-bl-sm bg-cream px-4 py-3 text-brown">
+        <p className="leading-relaxed">
+          ทริปนี้ตั้งวันจบไว้ {formatDate(trip.end_date)} ตอนนี้เลยมา {extra} วันแล้ว จะต่อทริปไหม?
+        </p>
+        <div className="mt-3 grid gap-2">
+          <button type="button" onClick={onExtend} className="rounded-full bg-orange py-2 text-sm font-semibold text-cream">
+            ต่อทริปถึงวันนี้ (+{formatBaht(extra * PRICE_PER_DAY)})
+          </button>
+          <button type="button" onClick={onEnd} className="rounded-full border border-brown/20 py-2 text-sm font-medium">
+            จบทริปเลย
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -208,7 +269,7 @@ function Bubble({ message: m }: { message: ChatMessage }) {
       <div
         className={`max-w-[78%] overflow-hidden rounded-2xl ${
           mine ? "rounded-br-sm bg-orange text-cream" : "rounded-bl-sm bg-cream text-brown"
-        } ${m.photos ? "p-1" : "px-4 py-2.5"}`}
+        } ${m.photos ? "w-60 p-1" : "px-4 py-2.5"}`}
       >
         {m.photos && (
           <div className={`grid gap-1 ${m.photos.length > 1 ? "grid-cols-2" : ""}`}>

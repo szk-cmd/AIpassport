@@ -1,6 +1,6 @@
 // เตรียมรูปในเบราว์เซอร์ก่อนอัปโหลด: อ่าน EXIF → ย่อรูป → จับกลุ่มเป็นทริปตามวันที่
 // ใช้ฝั่ง client เท่านั้น (ต้องมี canvas / createImageBitmap)
-import { MAX_FILE_MB } from "./plans";
+import { MAX_FILE_MB } from "./config";
 
 const MAX_SIDE = 1200; // ด้านยาวหลังย่อ (px)
 const JPEG_QUALITY = 0.8;

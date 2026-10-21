@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { MOCK_TRIP } from "@/lib/mock";
+import { useStore } from "@/lib/trip-store";
 
 // ข้อความภาษาคน ไม่บอกชื่อ agent (เรียงตามลำดับงานใน CLAUDE.md)
 const STEPS = [
@@ -17,9 +18,12 @@ const STEP_MS = 2000; // MOCK: ของจริงจะ polling สถาน�
 
 export function ProgressView() {
   const router = useRouter();
+  const { id } = useParams<{ id: string }>();
+  // ชื่อทริปจากเครื่องผู้ใช้ ถ้าไม่มี (เปิดจาก /dev) ใช้ทริปตัวอย่าง
+  const title = useStore()?.trips.find((t) => t.id === id)?.title ?? MOCK_TRIP.title;
   const [step, setStep] = useState(0);
   const done = step >= STEPS.length;
-  const reviewUrl = `/trip/${MOCK_TRIP.id}/review`;
+  const reviewUrl = `/trip/${id}/review`;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -40,7 +44,7 @@ export function ProgressView() {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-10">
       <p className="font-heading text-sm tracking-widest text-gold">ขั้นที่ 2 จาก 3</p>
-      <h1 className="mt-1 text-3xl font-semibold">{MOCK_TRIP.title}</h1>
+      <h1 className="mt-1 text-3xl font-semibold">{title}</h1>
 
       {/* ตราประทับหมุน */}
       <div className="my-10 flex justify-center">
