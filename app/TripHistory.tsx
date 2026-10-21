@@ -6,7 +6,7 @@ import { LogoMark } from "@/components/Logo";
 import { Photo } from "@/components/Photo";
 import { formatDateRange } from "@/lib/format";
 import { getPhoto, getTripBySlug, MOCK_SLUG } from "@/lib/mock";
-import { activeTrip, dayCount, todayKey, useStore, type StoreData, type StoredTrip } from "@/lib/trip-store";
+import { activeTrips, dayCount, todayKey, useStore, type StoreData, type StoredTrip } from "@/lib/trip-store";
 
 const STATUS_LABEL = { ended: "รอชำระเงิน", paid: "กำลังสร้างพาสปอร์ต", completed: null, active: null } as const;
 
@@ -22,7 +22,7 @@ export function TripHistory() {
   const data = useStore();
   if (!data) return null;
 
-  const active = activeTrip(data);
+  const active = activeTrips(data);
   const past = data.trips.filter((t) => t.status !== "active").sort((a, b) => b.start_date.localeCompare(a.start_date));
 
   return (
@@ -39,8 +39,11 @@ export function TripHistory() {
         <EmptyState />
       ) : (
         <>
-          {active && <ActiveCard trip={active} data={data} />}
-          {!active && <NewTripButton />}
+          {/* ทริปที่กำลังเที่ยว ปักไว้บนสุด (ค้างไว้ได้หลายทริป สรุปเมื่อกดจบทริปเท่านั้น) */}
+          {active.map((t) => (
+            <ActiveCard key={t.id} trip={t} data={data} />
+          ))}
+          <NewTripButton />
           {past.length > 0 && <Summary trips={past} />}
 
           <section className="mt-8">
@@ -63,6 +66,7 @@ export function TripHistory() {
 function ActiveCard({ trip, data }: { trip: StoredTrip; data: StoreData }) {
   const total = dayCount(trip.start_date, trip.end_date);
   const day = Math.min(Math.max(dayCount(trip.start_date, todayKey()), 1), total);
+  const overdue = todayKey() > trip.end_date;
   const last = data.messages[trip.id]?.at(-1);
   const preview = last?.text ?? (last?.photos ? `📷 ${last.photos.length} รูป` : "เริ่มเล่าเรื่องทริปได้เลย");
 
@@ -76,9 +80,7 @@ function ActiveCard({ trip, data }: { trip: StoredTrip; data: StoreData }) {
           <span className="size-2 animate-pulse rounded-full bg-cream" aria-hidden />
           กำลังเที่ยว
         </span>
-        <span className="text-sm text-brown/60">
-          วันที่ {day} จาก {total}
-        </span>
+        <span className="text-sm text-brown/60">{overdue ? "เลยวันจบแล้ว · รอกดจบทริป" : `วันที่ ${day} จาก ${total}`}</span>
       </div>
       <p className="mt-3 font-heading text-2xl font-semibold">{trip.title}</p>
       <p className="text-sm text-brown/60">{formatDateRange(trip.start_date, trip.end_date)}</p>

@@ -5,36 +5,18 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { packagePrice, PRICE_PER_DAY } from "@/lib/config";
 import { formatBaht } from "@/lib/format";
-import { activeTrip, dayCount, newId, todayKey, updateStore, useStore } from "@/lib/trip-store";
+import { dayCount, newId, todayKey, updateStore } from "@/lib/trip-store";
 
 const inputClass =
   "mt-1 w-full rounded-xl border border-brown/20 bg-white px-4 py-3 text-brown outline-none focus:border-orange";
 
-// สร้างทริปที่กำลังจะเที่ยว แล้วไปเล่าเรื่องต่อในแชท (มีได้ทีละ 1 ทริป)
+// สร้างทริปที่กำลังจะเที่ยว แล้วไปเล่าเรื่องต่อในแชท
+// สร้างได้เลยแม้มีทริปอื่นค้างอยู่ (ทริปเดิมค้างแชทไว้ ยังไม่สรุปจนกว่าจะกดจบทริป)
 export function StartForm() {
   const router = useRouter();
-  const data = useStore();
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState(todayKey());
   const [endDate, setEndDate] = useState("");
-
-  if (!data) return null;
-  const active = activeTrip(data);
-
-  if (active) {
-    return (
-      <main className="mx-auto w-full max-w-md px-4 py-10 text-center">
-        <h1 className="text-2xl font-semibold">มีทริปที่กำลังเที่ยวอยู่แล้ว</h1>
-        <p className="mt-2 text-cream/70">จบทริป “{active.title}” ก่อน แล้วค่อยสร้างทริปใหม่</p>
-        <Link
-          href={`/trip/${active.id}/chat`}
-          className="mt-6 block rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream"
-        >
-          ไปที่แชททริปนี้
-        </Link>
-      </main>
-    );
-  }
 
   const dateError = startDate && endDate && endDate < startDate;
   const canSubmit = title.trim() !== "" && startDate !== "" && endDate !== "" && !dateError;

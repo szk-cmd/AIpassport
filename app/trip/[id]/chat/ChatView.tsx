@@ -243,7 +243,11 @@ function ChatHeader({ trip, onMenu, onEnd }: { trip: StoredTrip; onMenu: () => v
         <div className="min-w-0 flex-1">
           <p className="truncate font-heading text-lg font-semibold">{trip.title}</p>
           <p className="text-xs text-cream/60">
-            {trip.status === "active" ? `กำลังเที่ยว · วันที่ ${day} จาก ${total}` : "จบทริปแล้ว"}
+            {trip.status !== "active"
+              ? "จบทริปแล้ว"
+              : todayKey() > trip.end_date
+                ? "เลยวันจบแล้ว · สรุปเมื่อกดจบทริป"
+                : `กำลังเที่ยว · วันที่ ${day} จาก ${total}`}
           </p>
         </div>
         {trip.status === "active" && (

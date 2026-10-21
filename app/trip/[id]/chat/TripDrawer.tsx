@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { formatDateRange } from "@/lib/format";
-import { activeTrip, type StoreData, type StoredTrip } from "@/lib/trip-store";
+import { activeTrips, type StoreData, type StoredTrip } from "@/lib/trip-store";
 
 type Props = { open: boolean; onClose: () => void; data: StoreData; currentId: string };
 
@@ -13,8 +13,10 @@ function href(t: StoredTrip) {
 
 // ลิ้นชักรายการทริป (ปุ่ม ☰ ในแชท)
 export function TripDrawer({ open, onClose, data, currentId }: Props) {
-  const active = activeTrip(data);
-  const others = data.trips.filter((t) => t !== active).sort((a, b) => b.start_date.localeCompare(a.start_date));
+  const active = activeTrips(data);
+  const others = data.trips
+    .filter((t) => t.status !== "active")
+    .sort((a, b) => b.start_date.localeCompare(a.start_date));
 
   return (
     <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`} aria-hidden={!open}>
@@ -38,19 +40,22 @@ export function TripDrawer({ open, onClose, data, currentId }: Props) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3">
-          {active ? (
+          <Link
+            href="/start"
+            onClick={onClose}
+            tabIndex={open ? 0 : -1}
+            className="block rounded-xl bg-orange px-4 py-3 text-center font-semibold text-cream"
+          >
+            + สร้างทริปใหม่
+          </Link>
+
+          {active.length > 0 && (
             <>
-              <p className="px-2 text-xs font-semibold tracking-wider text-orange">กำลังเที่ยว</p>
-              <DrawerItem trip={active} current={active.id === currentId} onClose={onClose} open={open} />
+              <p className="mt-5 px-2 text-xs font-semibold tracking-wider text-orange">กำลังเที่ยว</p>
+              {active.map((t) => (
+                <DrawerItem key={t.id} trip={t} current={t.id === currentId} onClose={onClose} open={open} />
+              ))}
             </>
-          ) : (
-            <Link
-              href="/start"
-              tabIndex={open ? 0 : -1}
-              className="block rounded-xl bg-orange px-4 py-3 text-center font-semibold text-cream"
-            >
-              + สร้างทริปใหม่
-            </Link>
           )}
 
           {others.length > 0 && (

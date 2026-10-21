@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { activeTrip, useSession, useStore } from "@/lib/trip-store";
+import { activeTrips, useSession, useStore } from "@/lib/trip-store";
 
 const NAV_HEIGHT = 64; // px ไม่รวมพื้นที่ขอบล่างของ iPhone
 
@@ -37,10 +37,12 @@ export function BottomNav() {
 
   if (!visible) return null;
 
-  const active = data ? activeTrip(data) : undefined;
+  // ทริปที่กำลังเที่ยวมีทริปเดียว → เข้าแชทนั้นตรงๆ, หลายทริป → รายการแชท
+  const active = data ? activeTrips(data) : [];
+  const chatHref = active.length === 1 ? `/trip/${active[0].id}/chat` : "/chat";
   const tabs = [
     { href: "/", label: "หน้าแรก", icon: "home", on: path === "/" || path.startsWith("/t/") },
-    { href: active ? `/trip/${active.id}/chat` : "/chat", label: "แชท", icon: "chat", on: inChat, dot: Boolean(active) },
+    { href: chatHref, label: "แชท", icon: "chat", on: inChat, dot: active.length > 0 },
     { href: "/profile", label: "โปรไฟล์", icon: "user", on: path === "/profile" },
   ] as const;
 
