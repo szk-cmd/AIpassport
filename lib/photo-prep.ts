@@ -1,6 +1,6 @@
 // เตรียมรูปในเบราว์เซอร์ก่อนอัปโหลด: อ่าน EXIF → ย่อรูป → จับกลุ่มเป็นทริปตามวันที่
 // ใช้ฝั่ง client เท่านั้น (ต้องมี canvas / createImageBitmap)
-import { MAX_FILE_MB } from "./config";
+import { AI_IMAGE_MAX_SIDE, MAX_FILE_MB } from "./config";
 
 const MAX_SIDE = 1200; // ด้านยาวหลังย่อ (px)
 const JPEG_QUALITY = 0.8;
@@ -88,6 +88,16 @@ export async function makeThumb(file: File, side = 320): Promise<string | null> 
     reader.onerror = () => resolve(null);
     reader.readAsDataURL(blob);
   });
+}
+
+// รูปย่อสำหรับส่งให้ AI (lib/ai.ts) เป็น base64 ไม่มี "data:..." นำหน้า
+export async function imageForAi(file: File): Promise<{ mimeType: "image/jpeg"; data: string } | null> {
+  const blob = await resizeImage(file, AI_IMAGE_MAX_SIDE, 0.8);
+  if (!blob) return null;
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return { mimeType: "image/jpeg", data: btoa(binary) };
 }
 
 // exifr คืนเวลาถ่ายเป็นเวลาท้องถิ่นของกล้อง จึงใช้ getDate() ไม่ใช่ UTC

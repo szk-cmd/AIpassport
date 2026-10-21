@@ -9,6 +9,9 @@ export const MAX_FILE_MB = 10;
 // เพดานรูปที่ส่งให้ AI ต่อทริป (คุมต้นทุนหลังบ้าน) ไม่ว่าผู้ใช้จะอัปโหลดมากี่รูป
 export const MAX_AI_PHOTOS_PER_TRIP = 100;
 
+// รูปที่ส่งให้ AI ย่อด้านยาวไม่เกินนี้ (ประหยัดโควตา) ทำในเบราว์เซอร์ก่อนส่ง
+export const AI_IMAGE_MAX_SIDE = 1024;
+
 // ราคาแพ็กเกจตอนสร้างทริป
 export function packagePrice(plannedDays: number) {
   return plannedDays * PRICE_PER_DAY;

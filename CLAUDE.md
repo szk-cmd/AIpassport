@@ -4,8 +4,9 @@
 - ผู้ใช้เป็นมือใหม่: ทำทีละงานเล็ก อธิบายสั้นๆ เป็นภาษาไทยหลังทำเสร็จ
 - ห้ามแก้ไฟล์ที่ไม่เกี่ยวกับงานที่สั่ง
 - TypeScript, mobile-first, ข้อความ UI ภาษาไทย
-- เรียก Anthropic API ฝั่ง server เท่านั้น ห้ามใส่ key ในโค้ด
-- ทุก agent รองรับ MOCK=true (คืนข้อมูลปลอม ไม่เรียก API)
+- เรียก AI ฝั่ง server เท่านั้น ห้ามใส่ key ในโค้ด (key อยู่ใน .env.local)
+- ทุก agent ต้องเรียก AI ผ่าน lib/ai.ts เท่านั้น ห้าม import SDK ของ AI ตรงๆ ที่อื่น
+- AI_PROVIDER=mock หรือไม่มี key = ใช้ข้อมูลปลอม ไม่เรียก API
 - ทำคนเดียว 3 สัปดาห์: เลือกวิธีที่ง่ายที่สุดที่ใช้งานได้
 - ไม่ทำ: ระบบสมาชิกจริง/สมัครสมาชิก, ระบบจ่ายเงินจริง, RLS, Supabase Realtime (ใช้ polling ทุก 2 วิ), LINE
 - login มีแค่บัญชีทดสอบ test / 1234 (lib/trip-store.ts) ระหว่าง MOCK ทริป แชท และ session เก็บใน localStorage
@@ -63,11 +64,25 @@ MAX_AI_PHOTOS_PER_TRIP = 100: เพดานรูปที่ส่งให�
      เข้าจากหน้าพร้อมแล้ว และปุ่มในการ์ดแชร์ (ใบสุดท้าย) ของ /t/[slug]
    - template กรอบรูป components/print-templates/ (1 ไฟล์ต่อแบบ ลงทะเบียนใน index.ts) ทุกแบบตัวใหญ่ คอนทราสต์สูง QR เล็กมุมล่าง
      classic (ใหญ่ 1 + เล็ก 4), polaroid (4-6 รูปเอียง + คำบรรยาย), passport (หน้าข้อมูล + ตราประทับ + MRZ), minimal (รูปเดียว ตัวบาง)
-7. /dev : ลิงก์ไปทุกหน้าด้วย mock data
+7. /dev : ลิงก์ไปทุกหน้าด้วย mock data (+ /api/health เช็กฐานข้อมูล, /api/ai-test เช็ก AI)
 
 ## ข้อมูลเดโม (บัญชีทดสอบ)
 เชียงใหม่ / ภูเก็ต / เกียวโต = completed + paid, หัวหิน 3 วัน = active อยู่วันที่ 2 เสมอ (lib/mock-active.ts คำนวณวันจากวันนี้)
 เปลี่ยนข้อมูลเดโม → เพิ่มเลขเวอร์ชัน DATA_KEY ใน lib/trip-store.ts
+
+## AI (lib/ai.ts)
+AI_PROVIDER = mock | gemini | anthropic
+- gemini: @google/genai, GEMINI_API_KEY, GEMINI_MODEL (ว่าง = gemini-3.8-flash รุ่น Flash ล่าสุดที่มี free tier)
+- anthropic: @anthropic-ai/sdk, ANTHROPIC_API_KEY, ANTHROPIC_MODEL (ว่าง = claude-opus-5-5, เปิด fallbacks "default")
+ฟังก์ชัน:
+- chat(messages, attachments) แชทบอท Agent 01 หลายรอบ + แนบรูป คืนข้อความเสมอ (error → ข้อความภาษาคน)
+- extract({ text, attachments }) → { places, expenses[{label, amount, category}] } สำหรับบันทึกลง trip_items
+- generateText(prompt, { system }) สำหรับ Agent 02-04
+รูปที่ส่งให้ AI ย่อในเบราว์เซอร์ก่อน ด้านยาว ≤ 1024px (imageForAi ใน lib/photo-prep.ts, AI_IMAGE_MAX_SIDE)
+429/503 → รอแล้วลองใหม่ 1 ครั้ง (retry ของ SDK) ยังไม่ได้ → "ตอนนี้มีคนใช้เยอะ ลองใหม่อีกสักครู่นะ" ไม่โชว์ error ดิบ
+extract/generateText โยน AiError (มี userMessage ภาษาคน) ให้ orchestrator ตัดสินใจ retry
+เช็กการเชื่อมต่อ: GET /api/ai-test (ส่ง "สวัสดี" แล้วแสดงคำตอบ + provider + model)
+ตอนนี้แชทในหน้าเว็บยังใช้บอท MOCK ฝั่งเบราว์เซอร์ (lib/chat-bot.ts) ยังไม่ได้ต่อ chat() จริง
 
 ## Agents (server, คืน JSON, ผ่าน orchestrator)
 01 Travel Memory Collection: รับรูปที่ย่อแล้ว + takenAt/lat/lng จากเบราว์เซอร์ (EXIF ถูกตัดตอนย่อ),

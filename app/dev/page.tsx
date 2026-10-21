@@ -32,7 +32,10 @@ const GROUPS = [
   },
   {
     title: "ระบบ",
-    links: [{ href: "/api/health", label: "เช็กฐานข้อมูล", note: "/api/health" }],
+    links: [
+      { href: "/api/health", label: "เช็กฐานข้อมูล", note: "/api/health" },
+      { href: "/api/ai-test", label: "เช็ก AI (ส่ง “สวัสดี”)", note: "/api/ai-test" },
+    ],
   },
 ];
 
