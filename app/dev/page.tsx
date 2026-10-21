@@ -10,9 +10,8 @@ const GROUPS = [
   {
     title: "Flow ผู้ใช้",
     links: [
-      { href: "/", label: "0. หน้าแรก", note: "/" },
-      { href: "/trips", label: "1. ทริปของคุณ", note: "/trips" },
-      { href: "/trips?demo=empty", label: "1b. ทริปของคุณ (ยังไม่มีทริป)", note: "/trips?demo=empty" },
+      { href: "/", label: "0. หน้าแรก (login test/1234 → ทริปของฉัน)", note: "/" },
+      { href: "/start", label: "1. สร้างทริปใหม่", note: "/start" },
       { href: "/plan", label: "2. เลือกแพ็กเกจ", note: "/plan" },
       { href: "/new?plan=free", label: "3. เริ่มทริปใหม่", note: "/new" },
       { href: `/trip/${id}/confirm`, label: "4. ตรวจสอบข้อมูล", note: "/trip/[id]/confirm" },

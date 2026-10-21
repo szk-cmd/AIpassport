@@ -27,8 +27,8 @@ export async function generateMetadata({ params }: PageProps<"/t/[slug]">): Prom
 export default function TripPage({ params }: PageProps<"/t/[slug]">) {
   return (
     <main className="mx-auto w-full max-w-md px-4 pt-4 pb-12">
-      <Link href="/trips" className="text-sm text-cream/70 hover:text-cream">
-        ← ทริปของคุณ
+      <Link href="/" className="text-sm text-cream/70 hover:text-cream">
+        ← ทริปของฉัน
       </Link>
       {/* อ่าน slug จาก URL อยู่ใน Suspense ตามกฎของ Next 16 */}
       <Suspense fallback={<p className="mt-10 text-center text-cream/60">กำลังเปิดทริป...</p>}>

@@ -8,9 +8,12 @@ export const MOCK_TRIP: Trip = {
   title: "เชียงใหม่ 3 วัน",
   start_date: "2026-11-14",
   end_date: "2026-11-16",
-  status: "awaiting_review",
-  plan: "free",
-  created_at: "2026-11-17T09:00:00+07:00",
+  planned_days: 3,
+  status: "completed",
+  ended_at: "2026-11-16T20:00:00+07:00",
+  paid_amount: null,
+  paid_at: null,
+  created_at: "2026-11-14T08:00:00+07:00",
 };
 
 export const MOCK_SLUG = "chiangmai-3-days";

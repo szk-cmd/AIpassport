@@ -1,22 +1,21 @@
-import type { PlanId } from "./plans";
+// ---------- ตารางในฐานข้อมูล (ตรงกับ supabase/schema.sql + migrations) ----------
 
-// ---------- ตารางในฐานข้อมูล (ตรงกับ supabase/schema.sql) ----------
-
-export type TripStatus =
-  | "draft"
-  | "collecting"
-  | "processing"
-  | "awaiting_review"
-  | "published"
-  | "failed";
+// active = กำลังเที่ยว แชทได้ไม่จำกัด (ทริปไม่จบเอง)
+// ended = ผู้ใช้กดจบทริปแล้ว รอชำระเงิน
+// paid = ชำระแล้ว AI กำลังสรุป / รอผู้ใช้ตรวจทาน
+// completed = ผู้ใช้ยืนยันแล้ว มีลิงก์ /t/[slug]
+export type TripStatus = "active" | "ended" | "paid" | "completed";
 
 export type Trip = {
   id: string;
   title: string;
   start_date: string; // "YYYY-MM-DD"
-  end_date: string;
+  end_date: string; // ขยายได้ถ้าผู้ใช้ต่อทริป
+  planned_days: number; // จำนวนวันตอนสร้างทริป ใช้คิดราคาแพ็กเกจ
   status: TripStatus;
-  plan: PlanId;
+  ended_at: string | null;
+  paid_amount: number | null; // บาท
+  paid_at: string | null;
   created_at: string;
 };
 

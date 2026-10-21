@@ -3,6 +3,8 @@ import { LogoTile, Wordmark } from "@/components/Logo";
 import { Photo } from "@/components/Photo";
 import { formatBaht, formatDateRange } from "@/lib/format";
 import { getPhoto, MOCK_SLUG, MOCK_SUMMARY } from "@/lib/mock";
+import { HomeGate } from "./HomeGate";
+import { LoginForm } from "./LoginForm";
 
 const FEATURES = [
   { icon: "photo", label: "รูปและตั๋ว" },
@@ -11,7 +13,12 @@ const FEATURES = [
   { icon: "cloud", label: "เก็บไว้ตลอดไป" },
 ] as const;
 
+// หน้าแรก: ยังไม่ login = หน้าแบรนด์ + ฟอร์มเข้าสู่ระบบ, login แล้ว = ประวัติทริป
 export default function HomePage() {
+  return <HomeGate landing={<Landing />} />;
+}
+
+function Landing() {
   const s = MOCK_SUMMARY;
   const cover = getPhoto(s.cover_photo_id);
 
@@ -29,23 +36,8 @@ export default function HomePage() {
         ให้เป็น “หนังสือเดินทางแห่งความทรงจำ”
       </p>
 
-      {/* ---------- ปุ่มเริ่ม ---------- */}
-      <div className="mt-8 w-full space-y-3">
-        <Link
-          href="/trips"
-          className="block w-full rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream shadow-lg transition hover:brightness-110"
-        >
-          ลองใช้งานเลย ไม่ต้องสมัคร
-        </Link>
-        <button
-          type="button"
-          disabled
-          className="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-cream/25 py-4 font-medium text-cream/50"
-        >
-          เข้าสู่ระบบ
-          <span className="rounded-full bg-gold/20 px-2 py-0.5 text-xs text-gold">เร็วๆ นี้</span>
-        </button>
-      </div>
+      {/* ---------- เข้าสู่ระบบ ---------- */}
+      <LoginForm />
 
       {/* ---------- จุดเด่น ---------- */}
       <ul className="mt-10 grid w-full grid-cols-4 divide-x divide-cream/10">
