@@ -62,20 +62,32 @@ export async function prepareFile(file: File): Promise<PreparedFile | null> {
   };
 }
 
-// ย่อให้ด้านยาวไม่เกิน MAX_SIDE เป็น JPEG, คืน null ถ้าเบราว์เซอร์อ่านรูปนี้ไม่ได้
-async function resizeImage(file: File): Promise<Blob | null> {
+// ย่อให้ด้านยาวไม่เกิน maxSide เป็น JPEG, คืน null ถ้าเบราว์เซอร์อ่านรูปนี้ไม่ได้
+async function resizeImage(file: File, maxSide = MAX_SIDE, quality = JPEG_QUALITY): Promise<Blob | null> {
   try {
     const bitmap = await createImageBitmap(file); // หมุนรูปตาม EXIF ให้เอง
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(bitmap.width * scale);
     canvas.height = Math.round(bitmap.height * scale);
     canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
-    return await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY));
+    return await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
   } catch {
     return null;
   }
+}
+
+// รูปย่อเล็กเป็น data URL เก็บใน localStorage ได้ (ใช้ในแชทระหว่างยังเป็น MOCK)
+export async function makeThumb(file: File, side = 320): Promise<string | null> {
+  const blob = await resizeImage(file, side, 0.7);
+  if (!blob) return null;
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(blob);
+  });
 }
 
 // exifr คืนเวลาถ่ายเป็นเวลาท้องถิ่นของกล้อง จึงใช้ getDate() ไม่ใช่ UTC

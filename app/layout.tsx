@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Thai, Prompt } from "next/font/google";
+import { Suspense } from "react";
+import { BottomNav } from "@/components/BottomNav";
 import "./globals.css";
 
 // ฟอนต์หัวข้อ
@@ -31,7 +33,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="th"
       className={`${prompt.variable} ${plexThai.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        {/* แถบเมนูอ่าน URL จึงต้องอยู่ใน Suspense (กฎของ Next 16) */}
+        <Suspense>
+          <BottomNav />
+        </Suspense>
+      </body>
     </html>
   );
 }

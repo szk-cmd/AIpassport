@@ -26,7 +26,7 @@ export function TripHistory() {
   const past = data.trips.filter((t) => t.status !== "active").sort((a, b) => b.start_date.localeCompare(a.start_date));
 
   return (
-    <main className="mx-auto w-full max-w-md px-4 pt-6 pb-28">
+    <main className="mx-auto w-full max-w-md px-4 pt-6 pb-8">
       <div className="flex items-center gap-2">
         <div className="rounded-xl bg-cream p-1">
           <LogoMark size={28} />
