@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/Logo";
 import { botReply } from "@/lib/chat-bot";
 import { PRICE_PER_DAY } from "@/lib/config";
@@ -112,12 +112,7 @@ export function ChatView() {
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="mx-auto max-w-md space-y-3">
-          {messages.map((m, i) => (
-            <div key={m.id}>
-              <DaySeparator trip={trip} message={m} previous={messages[i - 1]} />
-              <Bubble message={m} />
-            </div>
-          ))}
+          <MessageList trip={trip} messages={messages} />
           {trip.status === "active" && todayKey() > trip.end_date && (
             <ExtendPrompt trip={trip} onExtend={handleExtend} onEnd={handleEnd} />
           )}
@@ -180,6 +175,16 @@ export function ChatView() {
     </div>
   );
 }
+
+// แยกออกมาและ memo ไว้ พิมพ์ข้อความแล้วรายการแชท (ที่มีรูปเยอะ) จะไม่ต้องวาดใหม่ทุกตัวอักษร
+const MessageList = memo(function MessageList({ trip, messages }: { trip: StoredTrip; messages: ChatMessage[] }) {
+  return messages.map((m, i) => (
+    <div key={m.id}>
+      <DaySeparator trip={trip} message={m} previous={messages[i - 1]} />
+      <Bubble message={m} />
+    </div>
+  ));
+});
 
 function ChatHeader({ trip, onMenu, onEnd }: { trip: StoredTrip; onMenu: () => void; onEnd: () => void }) {
   const total = dayCount(trip.start_date, trip.end_date);

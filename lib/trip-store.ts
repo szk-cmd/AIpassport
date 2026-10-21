@@ -52,11 +52,16 @@ export const EMPTY_STORE: StoreData = { trips: [], messages: {} };
 const listeners = new Set<() => void>();
 
 function subscribe(listener: () => void) {
+  // เปลี่ยนจากแท็บอื่น: ทิ้งข้อมูลที่จำไว้ แล้วอ่านใหม่
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === DATA_KEY || e.key === null) cache = null;
+    listener();
+  };
   listeners.add(listener);
-  window.addEventListener("storage", listener); // เปลี่ยนจากแท็บอื่น
+  window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(listener);
-    window.removeEventListener("storage", listener);
+    window.removeEventListener("storage", onStorage);
   };
 }
 
@@ -78,20 +83,19 @@ function writeRaw(key: string, value: string | null) {
   listeners.forEach((l) => l());
 }
 
-// เก็บผล parse ไว้ React จะได้ค่าเดิมถ้าข้อมูลไม่เปลี่ยน
-let cache: { raw: string | null; data: StoreData } | null = null;
+// จำข้อมูลไว้ในหน่วยความจำ อ่าน localStorage แค่ครั้งแรกหรือเมื่อแท็บอื่นแก้
+// (ข้อมูลมีรูปย่อหลาย MB ถ้าอ่านทุกครั้งที่ render หน้าจะหน่วง โดยเฉพาะตอนพิมพ์)
+let cache: StoreData | null = null;
 
 function snapshot(): StoreData {
+  if (cache) return cache;
   const raw = readRaw(DATA_KEY);
-  if (cache && cache.raw === raw) return cache.data;
-  let data: StoreData;
   try {
-    data = raw ? JSON.parse(raw) : seed();
+    cache = raw ? JSON.parse(raw) : seed();
   } catch {
-    data = seed();
+    cache = seed();
   }
-  cache = { raw, data };
-  return data;
+  return cache!;
 }
 
 // null = ยังไม่รู้ (ตอน render ฝั่ง server / ก่อน hydrate)
@@ -100,10 +104,13 @@ export function useStore(): StoreData | null {
 }
 
 export function updateStore(change: (d: StoreData) => StoreData) {
-  writeRaw(DATA_KEY, JSON.stringify(change(snapshot())));
+  const next = change(snapshot());
+  cache = next; // ถ้าบันทึกลงเครื่องไม่ได้ (พื้นที่เต็ม) หน้านี้ยังใช้ข้อมูลใหม่ได้
+  writeRaw(DATA_KEY, JSON.stringify(next));
 }
 
 export function resetStore(empty = false) {
+  cache = null;
   writeRaw(DATA_KEY, empty ? JSON.stringify(EMPTY_STORE) : null);
 }
 
