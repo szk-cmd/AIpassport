@@ -7,7 +7,9 @@ export async function GET() {
 
   const { provider, model } = aiInfo();
   const started = Date.now();
-  const reply = await chat([{ role: "user", text: "สวัสดี" }]);
+  const reply = await chat([{ role: "user", text: "สวัสดี" }], [], {
+    system: "ทดสอบการเชื่อมต่อ ตอบทักทายสั้นๆ เป็นภาษาไทย 1 ประโยค",
+  });
   return Response.json({
     provider, // mock = ยังไม่ได้เรียก AI จริง (ไม่มี key หรือ AI_PROVIDER=mock)
     model,

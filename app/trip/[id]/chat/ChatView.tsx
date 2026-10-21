@@ -4,15 +4,15 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { memo, useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/Logo";
-import { botReply } from "@/lib/chat-bot";
 import { PRICE_PER_DAY } from "@/lib/config";
 import { formatBaht, formatDate } from "@/lib/format";
-import { makeThumb } from "@/lib/photo-prep";
+import { imageForAi, makeThumb } from "@/lib/photo-prep";
 import {
   addMessages,
   dayCount,
   newId,
   todayKey,
+  updateMessage,
   updateTrip,
   useStore,
   type ChatMessage,
@@ -23,6 +23,10 @@ import { TripDrawer } from "./TripDrawer";
 
 const PLACEHOLDER_COLORS = ["#E8A93C", "#1E6B63", "#E0642C", "#5B7DA8", "#B5838D"];
 const MAX_PHOTOS_PER_SEND = 10; // รูปย่อเก็บใน localStorage จึงจำกัดต่อครั้งไว้
+const MAX_PHOTOS_TO_AI = 4; // ส่งให้ AI ดูแค่ 4 รูปแรกต่อครั้ง ประหยัดโควตา
+const NETWORK_ERROR = "ส่งไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่อีกครั้งนะ";
+
+type AiImage = { mimeType: "image/jpeg"; data: string };
 
 // แชทระหว่างเที่ยว: ส่งข้อความ/รูป บอทตอบแบบ MOCK, ☰ เปิดลิ้นชักรายการทริป
 export function ChatView() {
@@ -31,14 +35,15 @@ export function ChatView() {
   const data = useStore();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(false); // กำลังย่อรูป
+  const [waiting, setWaiting] = useState(false); // รอ AI ตอบ
   const bottomRef = useRef<HTMLDivElement>(null);
   const messages = data?.messages[id] ?? [];
 
   // ข้อความใหม่ → เลื่อนลงล่างสุด
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+  }, [messages.length, waiting]);
 
   if (!data) return null;
   const trip = data.trips.find((t) => t.id === id);
@@ -53,14 +58,40 @@ export function ChatView() {
     );
   }
 
-  function send(message: Omit<ChatMessage, "id" | "from" | "at">) {
-    const turn = messages.length;
-    addMessages(id, [{ id: newId(), from: "user", at: new Date().toISOString(), ...message }]);
-    // MOCK: หน่วงนิดหนึ่งให้เหมือนบอทกำลังพิมพ์
-    setTimeout(() => {
-      const reply = botReply({ text: message.text, photoCount: message.photos?.length }, turn);
-      addMessages(id, [{ id: newId(), from: "bot", text: reply, at: new Date().toISOString() }]);
-    }, 700);
+  // ส่งข้อความให้ Agent 01 (ฝั่ง server ผ่าน /api/trip-chat) แล้วรอคำตอบ
+  async function send(message: Pick<ChatMessage, "text" | "photos">, images: AiImage[] = []) {
+    const t = trip!;
+    const userMessage: ChatMessage = { id: newId(), from: "user", at: new Date().toISOString(), ...message };
+    // ประวัติแชทแบบข้อความล้วน (รูปเก่าไม่ส่งซ้ำ ประหยัดโควตา)
+    const history = messages.map((m) => ({
+      role: m.from === "bot" ? "assistant" : "user",
+      text: m.text ?? (m.photos ? `[ส่งรูป ${m.photos.length} รูป]` : ""),
+    }));
+    addMessages(id, [userMessage]);
+    setWaiting(true);
+
+    let reply = NETWORK_ERROR;
+    try {
+      const res = await fetch("/api/trip-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trip: { title: t.title, startDate: t.start_date, endDate: t.end_date },
+          today: todayKey(),
+          history,
+          message: { text: message.text ?? "", attachments: images },
+        }),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        reply = result.reply;
+        if (result.extracted) updateMessage(id, userMessage.id, { extracted: result.extracted });
+      }
+    } catch {
+      // เน็ตหลุด: ใช้ข้อความ NETWORK_ERROR
+    }
+    addMessages(id, [{ id: newId(), from: "bot", text: reply, at: new Date().toISOString() }]);
+    setWaiting(false);
   }
 
   // ทริปไม่จบเอง ต้องให้ผู้ใช้กดจบเท่านั้น → เพิ่มรูปย้อนหลัง → สรุปค่าบริการ
@@ -86,7 +117,7 @@ export function ChatView() {
 
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() || waiting) return;
     send({ text: text.trim() });
     setText("");
   }
@@ -95,15 +126,21 @@ export function ChatView() {
     const files = Array.from(list ?? []).slice(0, MAX_PHOTOS_PER_SEND);
     if (files.length === 0) return;
     setBusy(true);
-    const photos: ChatPhoto[] = await Promise.all(
-      files.map(async (f, i) => ({
-        thumb: await makeThumb(f),
-        color: PLACEHOLDER_COLORS[i % PLACEHOLDER_COLORS.length],
-        caption: f.name,
-      })),
-    );
+    // รูปย่อเล็กเก็บในแชท + รูป 1024px ส่งให้ AI ดู (ทำพร้อมกัน)
+    const [photos, images] = await Promise.all([
+      Promise.all(
+        files.map(
+          async (f, i): Promise<ChatPhoto> => ({
+            thumb: await makeThumb(f),
+            color: PLACEHOLDER_COLORS[i % PLACEHOLDER_COLORS.length],
+            caption: f.name,
+          }),
+        ),
+      ),
+      Promise.all(files.slice(0, MAX_PHOTOS_TO_AI).map(imageForAi)),
+    ]);
     setBusy(false);
-    send({ photos });
+    send({ photos }, images.filter((x) => x !== null));
   }
 
   return (
@@ -113,6 +150,7 @@ export function ChatView() {
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="mx-auto max-w-md space-y-3">
           <MessageList trip={trip} messages={messages} />
+          {waiting && <TypingBubble />}
           {trip.status === "active" && todayKey() > trip.end_date && (
             <ExtendPrompt trip={trip} onExtend={handleExtend} onEnd={handleEnd} />
           )}
@@ -125,7 +163,7 @@ export function ChatView() {
           <div className="mx-auto flex max-w-md items-end gap-2">
             <label
               className={`flex size-11 shrink-0 items-center justify-center rounded-full text-xl ${
-                busy ? "cursor-wait bg-cream/5" : "cursor-pointer bg-cream/10 hover:bg-cream/20"
+                busy || waiting ? "cursor-wait bg-cream/5" : "cursor-pointer bg-cream/10 hover:bg-cream/20"
               }`}
               aria-label="ส่งรูป"
             >
@@ -134,7 +172,7 @@ export function ChatView() {
                 type="file"
                 accept="image/*"
                 multiple
-                disabled={busy}
+                disabled={busy || waiting}
                 className="sr-only"
                 onChange={(e) => {
                   handlePhotos(e.target.files);
@@ -155,7 +193,7 @@ export function ChatView() {
             />
             <button
               type="submit"
-              disabled={!text.trim()}
+              disabled={!text.trim() || waiting}
               // ไม่ให้ช่องพิมพ์หลุดโฟกัสตอนกดส่ง คีย์บอร์ดจะได้ไม่ปิด และแถบเมนูไม่เด้งกลับมาดันปุ่ม
               onPointerDown={(e) => e.preventDefault()}
               className="flex size-11 shrink-0 items-center justify-center rounded-full bg-orange text-cream disabled:opacity-40"
@@ -182,6 +220,7 @@ const MessageList = memo(function MessageList({ trip, messages }: { trip: Stored
     <div key={m.id}>
       <DaySeparator trip={trip} message={m} previous={messages[i - 1]} />
       <Bubble message={m} />
+      {m.extracted && <ExtractedNote extracted={m.extracted} />}
     </div>
   ));
 });
@@ -218,6 +257,37 @@ function ChatHeader({ trip, onMenu, onEnd }: { trip: StoredTrip; onMenu: () => v
         )}
       </div>
     </header>
+  );
+}
+
+// สิ่งที่ AI จดไว้จากข้อความนี้ ให้ผู้ใช้เห็นว่าระบบเก็บอะไรไปบ้าง
+function ExtractedNote({ extracted }: { extracted: NonNullable<ChatMessage["extracted"]> }) {
+  const items = [
+    ...extracted.places.map((p) => `📍 ${p}`),
+    ...extracted.expenses.map((e) => `💰 ${e.label} ${formatBaht(e.amount)}`),
+  ];
+  if (items.length === 0) return null;
+  return <p className="mt-1 text-right text-[11px] text-cream/50">จดไว้: {items.join(" · ")}</p>;
+}
+
+function TypingBubble() {
+  return (
+    <div className="flex items-end gap-2" aria-live="polite">
+      <div className="shrink-0 rounded-full bg-cream p-1">
+        <LogoMark size={22} />
+      </div>
+      <div className="rounded-2xl rounded-bl-sm bg-cream px-4 py-3 text-brown/60">
+        <span className="inline-flex gap-1" aria-label="กำลังพิมพ์">
+          {[0, 150, 300].map((delay) => (
+            <span
+              key={delay}
+              className="size-2 animate-bounce rounded-full bg-brown/40"
+              style={{ animationDelay: `${delay}ms` }}
+            />
+          ))}
+        </span>
+      </div>
+    </div>
   );
 }
 

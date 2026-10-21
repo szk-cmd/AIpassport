@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { PRICE_PER_DAY } from "./config";
 import { MOCK_TRIPS } from "./mock";
 import { mockActiveTrip } from "./mock-active";
-import type { Trip } from "./types";
+import type { Extracted, Trip } from "./types";
 
 export type ChatPhoto = { thumb: string | null; color: string; caption: string };
 
@@ -13,6 +13,7 @@ export type ChatMessage = {
   from: "user" | "bot";
   text?: string;
   photos?: ChatPhoto[];
+  extracted?: Extracted; // สถานที่/ค่าใช้จ่ายที่ AI ดึงจากข้อความนี้ (Agent 01)
   at: string; // ISO
 };
 
@@ -120,6 +121,16 @@ export function updateTrip(id: string, patch: Partial<StoredTrip>) {
 
 export function addMessages(tripId: string, messages: ChatMessage[]) {
   updateStore((d) => ({ ...d, messages: { ...d.messages, [tripId]: [...(d.messages[tripId] ?? []), ...messages] } }));
+}
+
+export function updateMessage(tripId: string, messageId: string, patch: Partial<ChatMessage>) {
+  updateStore((d) => ({
+    ...d,
+    messages: {
+      ...d.messages,
+      [tripId]: (d.messages[tripId] ?? []).map((m) => (m.id === messageId ? { ...m, ...patch } : m)),
+    },
+  }));
 }
 
 // มีทริปที่กำลังเที่ยวได้ทีละ 1 ทริป

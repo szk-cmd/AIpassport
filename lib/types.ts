@@ -92,6 +92,12 @@ export type RoutePoint = {
   lng: number;
 };
 
+// ข้อมูลที่ AI ดึงจากข้อความ/รูปในแชท (lib/ai.ts extract) ภายหลังจะบันทึกลง trip_items
+export type Extracted = {
+  places: string[];
+  expenses: { label: string; amount: number; category: ExpenseCategory }[];
+};
+
 export type ExpenseLine = {
   label: string;
   category: ExpenseCategory;
