@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MOCK_SLUG, MOCK_TRIP } from "@/lib/mock";
+import { DEMO_ACTIVE_ID } from "@/lib/mock-active";
 
 export const metadata: Metadata = { title: "Dev – PassportAI" };
 
@@ -12,6 +13,9 @@ const GROUPS = [
     links: [
       { href: "/", label: "0. หน้าแรก (login test/1234 → ทริปของฉัน)", note: "/" },
       { href: "/start", label: "1. สร้างทริปใหม่", note: "/start" },
+      { href: `/trip/${DEMO_ACTIVE_ID}/chat`, label: "2. แชททริปที่กำลังเที่ยว (หัวหิน)", note: "/trip/[id]/chat" },
+      { href: `/trip/${DEMO_ACTIVE_ID}/photos`, label: "3. จบทริป → เพิ่มรูปย้อนหลัง", note: "/trip/[id]/photos" },
+      { href: `/trip/${DEMO_ACTIVE_ID}/checkout`, label: "3b. สรุปค่าบริการ (ต้องกดจบทริปก่อน)", note: "/trip/[id]/checkout" },
       { href: `/trip/${id}/confirm`, label: "4. ตรวจสอบข้อมูล", note: "/trip/[id]/confirm" },
       { href: `/trip/${id}/progress`, label: "5. กำลังสร้าง", note: "/trip/[id]/progress" },
       { href: `/trip/${id}/review`, label: "6. ตรวจทาน", note: "/trip/[id]/review" },

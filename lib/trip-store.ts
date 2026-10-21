@@ -1,7 +1,9 @@
 // ที่เก็บทริป + แชท + การ login ในเครื่องผู้ใช้ (localStorage) ระหว่างยังเป็นโหมด MOCK
 // ใช้ฝั่ง client เท่านั้น ของจริงจะย้ายไปตาราง trips / trip_items ใน Supabase
 import { useSyncExternalStore } from "react";
+import { PRICE_PER_DAY } from "./config";
 import { MOCK_TRIPS } from "./mock";
+import { mockActiveTrip } from "./mock-active";
 import type { Trip } from "./types";
 
 export type ChatPhoto = { thumb: string | null; color: string; caption: string };
@@ -18,11 +20,13 @@ export type StoredTrip = Trip & { slug: string | null }; // slug มีเมื
 
 export type StoreData = { trips: StoredTrip[]; messages: Record<string, ChatMessage[]> };
 
-const DATA_KEY = "passportai:data:v1";
+// เปลี่ยนเลขเวอร์ชันเมื่อข้อมูลเดโมเปลี่ยน เครื่องที่เคยเปิดจะได้ข้อมูลชุดใหม่
+const DATA_KEY = "passportai:data:v2";
 const SESSION_KEY = "passportai:session";
 
 // ---------- ข้อมูลเริ่มต้นของบัญชีทดสอบ ----------
 
+// ทริปที่จบแล้ว (เชียงใหม่ ภูเก็ต เกียวโต) + ทริปที่กำลังเที่ยวอยู่วันที่ 2
 function seed(): StoreData {
   const trips: StoredTrip[] = MOCK_TRIPS.map(({ slug, summary: s }) => ({
     id: s.trip_id,
@@ -32,12 +36,13 @@ function seed(): StoreData {
     planned_days: s.stats.days,
     status: "completed",
     ended_at: `${s.end_date}T20:00:00+07:00`,
-    paid_amount: null,
-    paid_at: null,
+    paid_amount: s.stats.days * PRICE_PER_DAY,
+    paid_at: `${s.end_date}T20:05:00+07:00`,
     created_at: `${s.start_date}T08:00:00+07:00`,
     slug,
   }));
-  return { trips, messages: {} };
+  const active = mockActiveTrip();
+  return { trips: [active.trip, ...trips], messages: { [active.trip.id]: active.messages } };
 }
 
 export const EMPTY_STORE: StoreData = { trips: [], messages: {} };

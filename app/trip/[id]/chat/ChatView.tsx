@@ -278,7 +278,15 @@ function Bubble({ message: m }: { message: ChatMessage }) {
                 // eslint-disable-next-line @next/next/no-img-element -- รูปย่อในเครื่อง
                 <img key={i} src={p.thumb} alt={p.caption} className="aspect-square w-full rounded-xl object-cover" />
               ) : (
-                <div key={i} className="aspect-square w-full rounded-xl" style={{ background: p.color }} role="img" aria-label={p.caption} />
+                <div
+                  key={i}
+                  className="flex aspect-square w-full items-end rounded-xl p-2 text-left text-xs text-cream"
+                  style={{ background: `linear-gradient(160deg, ${p.color}, ${p.color}aa 60%, #2B2019 140%)` }}
+                  role="img"
+                  aria-label={p.caption}
+                >
+                  {p.caption}
+                </div>
               ),
             )}
           </div>

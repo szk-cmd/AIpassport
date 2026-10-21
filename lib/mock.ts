@@ -1,3 +1,4 @@
+import { PRICE_PER_DAY } from "./config";
 import { KYOTO_PHOTOS, KYOTO_SUMMARY, PHUKET_PHOTOS, PHUKET_SUMMARY } from "./mock-trips";
 import type { ExpenseLine, Trip, TripItem, TripSummary } from "./types";
 
@@ -11,8 +12,8 @@ export const MOCK_TRIP: Trip = {
   planned_days: 3,
   status: "completed",
   ended_at: "2026-11-16T20:00:00+07:00",
-  paid_amount: null,
-  paid_at: null,
+  paid_amount: 3 * PRICE_PER_DAY,
+  paid_at: "2026-11-16T20:05:00+07:00",
   created_at: "2026-11-14T08:00:00+07:00",
 };
 
