@@ -11,14 +11,65 @@
   --font-heading: var(--font-prompt), sans-serif;
 }
 
-body {
-  background: var(--color-brown);
-  color: var(--color-cream);
-  font-family: var(--font-sans);
+/*
+  ระบบดีไซน์ใหม่ (มินิมอล แนว Airbnb / Apple / Polarsteps) ใช้คู่กับ components/ui/
+  @theme สร้างทั้ง class ของ Tailwind และ CSS variable บน :root เช่น bg-canvas / var(--color-canvas)
+  ระยะห่างใช้สเกล 8px ของ Tailwind: 2=8 4=16 6=24 8=32 12=48
+*/
+@theme {
+  /* พื้นหลัง */
+  --color-canvas: #fafaf9; /* พื้นหลักของหน้า */
+  --color-surface: #f2f1ee; /* พื้นรอง เช่นช่องกรอก ชิป ปุ่มรอง */
+  --color-card: #ffffff;
+
+  /* ตัวหนังสือ */
+  --color-ink: #1c1917; /* หลัก */
+  --color-ink-muted: #57534e; /* รอง */
+  --color-ink-faint: #a8a29e; /* จาง / placeholder / disabled */
+
+  --color-line: #e7e5e4; /* เส้นแบ่ง ใช้น้อยที่สุด */
+
+  /* แบรนด์: ใช้เฉพาะปุ่มหลัก ลิงก์ และสถานะ active */
+  --color-brand: #c2410c;
+  --color-brand-hover: #9a3412;
+  /* น้ำตาลแบรนด์ (bg-brown เดิม #2B2019) ใช้เฉพาะการ์ดปกทริปและตราประทับ */
+
+  /* สถานะ */
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #b91c1c;
+
+  /* ตัวอักษร 5 ระดับ ใช้น้ำหนัก 400 (font-normal) และ 600 (font-semibold) เท่านั้น */
+  --text-title: 28px;
+  --text-title--line-height: 36px;
+  --text-heading: 20px;
+  --text-heading--line-height: 28px;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-label: 14px;
+  --text-label--line-height: 20px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+
+  /* มุมโค้ง 3 ระดับ: control 8 (ปุ่ม/ช่องกรอก), card 16, ชิปใช้ rounded-full */
+  --radius-control: 8px;
+  --radius-card: 16px;
+
+  /* เงาแบบเดียว เบามาก */
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-heading);
+/* อยู่ใน layer base เพื่อให้ class ของ Tailwind (เช่น font-sans ใน components/ui) ทับได้ */
+@layer base {
+  body {
+    background: var(--color-brown);
+    color: var(--color-cream);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+  }
 }

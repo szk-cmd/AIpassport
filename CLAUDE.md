@@ -15,7 +15,22 @@
 - dev server ไม่รับการแก้ app/globals.css (Tailwind turbopack cache) → หยุด dev, ลบโฟลเดอร์ .next, รัน npm run dev ใหม่
   เลยใส่ style เฉพาะหน้าไว้ในคอมโพเนนต์ (Tailwind class / inline style) แทนการเพิ่มใน globals.css
 
-## โทนดีไซน์
+## ระบบดีไซน์ใหม่ (กำลังรีดีไซน์ ทำทีละขั้น ห้ามเปลี่ยน flow/ข้อมูล/logic)
+มินิมอล เป็นทางการ แนว Airbnb / Apple / Polarsteps ดูตัวอย่างทุกชิ้นที่ /dev/ui
+- tokens ใน app/globals.css (@theme) ได้ทั้ง class Tailwind และ CSS variable:
+  bg-canvas #FAFAF9, bg-surface #F2F1EE, bg-card #FFF, text-ink #1C1917 / ink-muted #57534E / ink-faint #A8A29E,
+  border-line #E7E5E4 (ใช้น้อยที่สุด), brand #C2410C (เฉพาะปุ่มหลัก ลิงก์ active), bg-brown #2B2019 (เฉพาะการ์ดปกทริป/ตราประทับ),
+  success #15803D, warning #B45309, danger #B91C1C
+- ตัวอักษร IBM Plex Sans Thai: text-title 28 / heading 20 / body 16 / label 14 / caption 12, น้ำหนัก 400 กับ 600 เท่านั้น
+- ระยะ 8px (2/4/6/8/12 ของ Tailwind), มุม rounded-control 8 / rounded-card 16 / rounded-full ชิป, เงาเดียว shadow-soft
+- ไอคอน lucide-react 20px เส้น 1.75 (ส่ง {...ICON}) ห้ามใช้ emoji บนหน้าจอ
+- components/ui: Button/ButtonLink (primary/secondary/ghost, disabled = พื้นเทาอ่อน ตัวหนังสือเทา), Input, DateField,
+  Card, Chip, StatTile, ListItem, EmptyState, TopBar/IconButton, BottomTabBar, Sheet (ซ้าย/ล่าง), Avatar
+- หัวข้อใน components/ui ใส่ font-sans เอง (กฎ h1-h3 ใน globals.css อยู่ใน @layer base จึงถูก class ทับได้)
+- ฟอนต์ Prompt ยังโหลดอยู่จนกว่าหน้าเดิมจะย้ายมาใช้ระบบใหม่ครบ แล้วค่อยตัดออก
+- แก้ globals.css แล้วต้องหยุด dev → ลบ .next/dev → npm run dev ใหม่ (ไม่ต้องลบ .next ทั้งหมด build production อยู่ในนั้น)
+
+## โทนดีไซน์ (เดิม ใช้ในหน้าที่ยังไม่ได้รีดีไซน์)
 พื้นน้ำตาลเข้ม #2B2019, ครีม #F7F2EA, ส้ม #E0642C, เขียวอมฟ้า #1E6B63, เหลืองทอง #E8A93C
 ฟอนต์ Prompt (หัวข้อ) + IBM Plex Sans Thai (เนื้อหา) จาก Google Fonts
 
