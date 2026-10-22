@@ -2,17 +2,22 @@ import { Stamp, STAMP_COLORS } from "@/components/cards/Stamp";
 import { Photo } from "@/components/Photo";
 import { formatDateRange } from "@/lib/format";
 import type { TripSummary } from "@/lib/types";
-import { CornerQr, orderedPhotos, Sheet, type TemplateProps } from "./shared";
+import { CornerQr, photosOf, Sheet, type TemplateProps } from "./shared";
 
 // พาสปอร์ต: หน้าข้อมูลพาสปอร์ต + ตราประทับสถานที่ + แถบ MRZ ด้านล่าง
-export function Passport({ s, slug, text, heroId }: TemplateProps) {
-  const [hero] = orderedPhotos(s, heroId);
-  const stamps = stampsOf(s).slice(0, 3);
+export function Passport({ s, slug, text, photoIds, hidden }: TemplateProps) {
+  const [hero] = photosOf(photoIds);
+  const show = (key: TemplateProps["hidden"][number]) => !hidden.includes(key);
+  const stamps = show("stamps") ? stampsOf(s).slice(0, 3) : [];
   const fields = [
     { label: "ชื่อทริป · TRIP", value: s.print.headline, big: true },
-    { label: "วันที่ · DATES", value: formatDateRange(s.start_date, s.end_date) },
-    { label: "ระยะเวลา · DURATION", value: `${s.stats.days} วัน · ${s.stats.places} สถานที่` },
-    { label: "ระยะทาง · DISTANCE", value: `${s.stats.distance_km.toLocaleString("th-TH")} กม.` },
+    ...(show("date") ? [{ label: "วันที่ · DATES", value: formatDateRange(s.start_date, s.end_date) }] : []),
+    ...(show("stats")
+      ? [
+          { label: "ระยะเวลา · DURATION", value: `${s.stats.days} วัน · ${s.stats.places} สถานที่` },
+          { label: "ระยะทาง · DISTANCE", value: `${s.stats.distance_km.toLocaleString("th-TH")} กม.` },
+        ]
+      : []),
   ];
 
   return (
@@ -56,9 +61,11 @@ export function Passport({ s, slug, text, heroId }: TemplateProps) {
             </dl>
           </div>
 
-          <p className="mt-[4cqw] line-clamp-3 shrink-0 border-l-[0.8cqw] border-orange pl-[3cqw] font-heading text-[4.8cqw] leading-snug font-medium">
-            {text}
-          </p>
+          {show("text") && (
+            <p className="mt-[4cqw] line-clamp-3 shrink-0 border-l-[0.8cqw] border-orange pl-[3cqw] font-heading text-[4.8cqw] leading-snug font-medium">
+              {text}
+            </p>
+          )}
 
           <div className="flex min-h-0 flex-1 justify-between gap-[2cqw] pb-[3cqw]">
             <div className="flex flex-1 items-center justify-around">
@@ -74,7 +81,7 @@ export function Passport({ s, slug, text, heroId }: TemplateProps) {
               ))}
             </div>
             <div className="self-end">
-              <CornerQr slug={slug} light="#F4EFE4" label={false} />
+              {show("qr") && <CornerQr slug={slug} light="#F4EFE4" label={false} />}
             </div>
           </div>
         </div>

@@ -1,10 +1,11 @@
 import { Photo } from "@/components/Photo";
 import { formatDateRange } from "@/lib/format";
-import { CornerQr, orderedPhotos, Sheet, type TemplateProps } from "./shared";
+import { CornerQr, photosOf, Sheet, type TemplateProps } from "./shared";
 
 // มินิมอล: รูปเดียวเต็มกรอบ ชื่อสถานที่และวันที่ตัวบาง แต่ใหญ่และเข้มพออ่านง่าย
-export function Minimal({ s, slug, text, heroId }: TemplateProps) {
-  const [hero] = orderedPhotos(s, heroId);
+export function Minimal({ s, slug, text, photoIds, hidden }: TemplateProps) {
+  const [hero] = photosOf(photoIds);
+  const show = (key: TemplateProps["hidden"][number]) => !hidden.includes(key);
 
   return (
     <Sheet className="bg-white">
@@ -14,12 +15,14 @@ export function Minimal({ s, slug, text, heroId }: TemplateProps) {
         <div className="mt-[5cqw] flex shrink-0 items-end justify-between gap-[4cqw]">
           <div className="min-w-0">
             <h2 className="font-heading text-[9cqw] leading-tight font-light">{hero?.data.place ?? s.print.headline}</h2>
-            <p className="mt-[0.5cqw] font-heading text-[4.2cqw] font-light tracking-[0.15em]">
-              {formatDateRange(s.start_date, s.end_date)}
-            </p>
-            <p className="mt-[3cqw] line-clamp-3 text-[4.2cqw] leading-snug">{text}</p>
+            {show("date") && (
+              <p className="mt-[0.5cqw] font-heading text-[4.2cqw] font-light tracking-[0.15em]">
+                {formatDateRange(s.start_date, s.end_date)}
+              </p>
+            )}
+            {show("text") && <p className="mt-[3cqw] line-clamp-3 text-[4.2cqw] leading-snug">{text}</p>}
           </div>
-          <CornerQr slug={slug} light="#FFFFFF" label={false} />
+          {show("qr") && <CornerQr slug={slug} light="#FFFFFF" label={false} />}
         </div>
       </div>
     </Sheet>

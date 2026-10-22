@@ -6,11 +6,15 @@ import { Photo } from "@/components/Photo";
 import {
   aiPhotoIds,
   defaultPrintOptions,
+  fitPhotos,
   getTemplate,
+  INFO_LABELS,
   MAX_TEXT_LENGTH,
   printHref,
   TEMPLATES,
+  type InfoKey,
   type PrintOptions,
+  type TemplateId,
 } from "@/components/print-templates";
 import { getPhoto } from "@/lib/mock";
 import type { TripSummary } from "@/lib/types";
@@ -29,7 +33,7 @@ const FRAMES = [
 
 type Props = { s: TripSummary; slug: string };
 
-// ขั้น 1 เลือก template + แก้ข้อความ/รูปเด่น → ขั้น 2 เลือกขนาด/กรอบ ยังไม่มีระบบจ่ายเงิน
+// ขั้น 1 เลือก template + รูปในกรอบ + ข้อมูลที่แสดง + ข้อความ → ขั้น 2 เลือกขนาด/กรอบ ยังไม่มีระบบจ่ายเงิน
 export function OrderForm({ s, slug }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [options, setOptions] = useState<PrintOptions>(() => defaultPrintOptions(s));
@@ -40,8 +44,40 @@ export function OrderForm({ s, slug }: Props) {
   const frame = FRAMES.find((x) => x.id === frameId)!;
   const template = getTemplate(options.template);
   const update = (change: Partial<PrintOptions>) => setOptions((o) => ({ ...o, ...change }));
+  const { min, max } = template.photos;
+  const enoughPhotos = options.photoIds.length >= min;
 
-  const preview = <template.Component s={s} slug={slug} text={options.text} heroId={options.heroId} />;
+  // เปลี่ยนแบบ: เก็บรูปที่เลือกไว้เท่าที่แบบใหม่รับได้ ขาดก็เติมจากรูปที่ AI คัด
+  function chooseTemplate(id: TemplateId) {
+    update({ template: id, photoIds: fitPhotos(s, id, options.photoIds) });
+  }
+
+  // แตะรูป: ยังไม่เลือก → เพิ่มต่อท้าย, เลือกแล้ว → เอาออก, แบบรูปเดียว → เปลี่ยนรูปเลย
+  function togglePhoto(id: string) {
+    const ids = options.photoIds;
+    if (max === 1) return update({ photoIds: [id] });
+    if (ids.includes(id)) return update({ photoIds: ids.filter((x) => x !== id) });
+    if (ids.length < max) update({ photoIds: [...ids, id] });
+  }
+
+  function makeHero(id: string) {
+    update({ photoIds: [id, ...options.photoIds.filter((x) => x !== id)] });
+  }
+
+  function toggleInfo(key: InfoKey) {
+    const hidden = options.hidden.includes(key) ? options.hidden.filter((k) => k !== key) : [...options.hidden, key];
+    update({ hidden });
+  }
+
+  const preview = (
+    <template.Component
+      s={s}
+      slug={slug}
+      text={options.text}
+      photoIds={options.photoIds}
+      hidden={options.hidden}
+    />
+  );
 
   const optionClass = (on: boolean) =>
     `rounded-xl border-2 px-3 py-2 text-left transition ${
@@ -61,7 +97,7 @@ export function OrderForm({ s, slug }: Props) {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => update({ template: t.id })}
+                onClick={() => chooseTemplate(t.id)}
                 aria-pressed={on}
                 className="w-24 shrink-0 snap-start text-center"
               >
@@ -71,7 +107,13 @@ export function OrderForm({ s, slug }: Props) {
                   }`}
                   aria-hidden
                 >
-                  <t.Component s={s} slug={slug} text={options.text} heroId={options.heroId} />
+                  <t.Component
+                    s={s}
+                    slug={slug}
+                    text={options.text}
+                    photoIds={fitPhotos(s, t.id, options.photoIds)}
+                    hidden={options.hidden}
+                  />
                 </div>
                 <span className={`mt-2 block text-sm ${on ? "font-semibold text-orange" : "text-cream/70"}`}>
                   {t.name}
@@ -84,7 +126,85 @@ export function OrderForm({ s, slug }: Props) {
         <div className="mx-auto w-full shadow-2xl">{preview}</div>
 
         <section className="space-y-5 rounded-2xl bg-cream p-5 text-brown">
-          <label className="block">
+          <div>
+            <div className="flex items-baseline justify-between">
+              <p className="font-medium">รูปในกรอบ</p>
+              <span className={`text-sm ${enoughPhotos ? "text-brown/60" : "font-semibold text-orange"}`}>
+                {options.photoIds.length}/{max} รูป
+              </span>
+            </div>
+            <p className="text-xs text-brown/60">
+              {max === 1
+                ? "แบบนี้ใช้รูปเดียว แตะเพื่อเปลี่ยนรูป"
+                : `แตะเพื่อเลือก/เอาออก (อย่างน้อย ${min} รูป) · รูปหมายเลข 1 = รูปใหญ่ กด ★ เพื่อเปลี่ยนรูปใหญ่`}
+            </p>
+            <div className="mt-2 grid grid-cols-4 gap-1.5">
+              {aiPhotoIds(s).map((id) => {
+                const photo = getPhoto(id);
+                if (!photo) return null;
+                const order = options.photoIds.indexOf(id);
+                const on = order !== -1;
+                const full = !on && max > 1 && options.photoIds.length >= max;
+                return (
+                  <div key={id} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => togglePhoto(id)}
+                      disabled={full}
+                      aria-pressed={on}
+                      aria-label={photo.data.caption}
+                      className={`block w-full overflow-hidden rounded-md ${
+                        on ? "ring-3 ring-orange" : full ? "opacity-30" : "opacity-60 hover:opacity-100"
+                      }`}
+                    >
+                      <Photo photo={photo} hidePlace className="aspect-square" />
+                    </button>
+                    {on && max > 1 && (
+                      <span className="pointer-events-none absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-orange text-xs font-bold text-cream">
+                        {order + 1}
+                      </span>
+                    )}
+                    {on && order > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => makeHero(id)}
+                        className="absolute bottom-1 left-1 rounded-full bg-black/55 px-1.5 text-xs text-cream"
+                        aria-label={`ใช้ ${photo.data.caption} เป็นรูปใหญ่`}
+                      >
+                        ★
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {!enoughPhotos && <p className="mt-2 text-sm text-orange">แบบนี้ต้องมีอย่างน้อย {min} รูป</p>}
+          </div>
+
+          <div>
+            <p className="font-medium">ข้อมูลที่แสดง</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {template.info.map((key) => {
+                const on = !options.hidden.includes(key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleInfo(key)}
+                    aria-pressed={on}
+                    className={`rounded-full border-2 px-3 py-1.5 text-sm transition ${
+                      on ? "border-teal bg-teal text-cream" : "border-brown/20 bg-white text-brown/50 line-through"
+                    }`}
+                  >
+                    {on ? "✓ " : ""}
+                    {INFO_LABELS[key]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <label className={`block ${options.hidden.includes("text") ? "opacity-50" : ""}`}>
             <span className="font-medium">ข้อความบนกรอบรูป</span>
             <textarea
               rows={3}
@@ -98,34 +218,11 @@ export function OrderForm({ s, slug }: Props) {
             </span>
           </label>
 
-          <div>
-            <p className="font-medium">รูปเด่น</p>
-            <p className="text-xs text-brown/60">เลือกจากรูปที่ AI คัดไว้</p>
-            <div className="mt-2 grid grid-cols-5 gap-1.5">
-              {aiPhotoIds(s).map((id) => {
-                const photo = getPhoto(id);
-                if (!photo) return null;
-                const on = id === options.heroId;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => update({ heroId: id })}
-                    aria-pressed={on}
-                    aria-label={photo.data.caption}
-                    className={`overflow-hidden rounded-md ${on ? "ring-3 ring-orange" : "opacity-70 hover:opacity-100"}`}
-                  >
-                    <Photo photo={photo} hidePlace className="aspect-square" />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           <button
             type="button"
             onClick={() => setStep(2)}
-            className="w-full rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream"
+            disabled={!enoughPhotos}
+            className="w-full rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream disabled:opacity-40"
           >
             ถัดไป เลือกขนาดและกรอบ
           </button>

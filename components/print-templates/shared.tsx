@@ -2,12 +2,25 @@ import { QrCode } from "@/components/QrCode";
 import { getPhoto } from "@/lib/mock";
 import type { TripSummary } from "@/lib/types";
 
+// ข้อมูลบนกรอบที่ผู้ใช้เปิด/ปิดได้ (แต่ละ template ประกาศว่ารองรับอะไรบ้างใน index.ts)
+export type InfoKey = "date" | "text" | "captions" | "stats" | "stamps" | "qr";
+
+export const INFO_LABELS: Record<InfoKey, string> = {
+  date: "วันที่",
+  text: "ข้อความสั้น",
+  captions: "คำบรรยายใต้รูป",
+  stats: "สถิติทริป",
+  stamps: "ตราประทับ",
+  qr: "QR โค้ด",
+};
+
 // ทุก template รับ props ชุดเดียวกัน ใช้ทั้งตัวอย่างในหน้าสั่งพิมพ์และหน้า print (PDF)
 export type TemplateProps = {
   s: TripSummary;
   slug: string;
   text: string; // ข้อความสั้น 2-3 บรรทัด (ผู้ใช้แก้ได้)
-  heroId: string; // รูปเด่น (สลับได้จากรูปที่ AI คัด)
+  photoIds: string[]; // รูปในกรอบตามลำดับที่ผู้ใช้เลือก รูปแรก = รูปใหญ่
+  hidden: InfoKey[]; // ข้อมูลที่ผู้ใช้ปิดไว้
 };
 
 export const MAX_TEXT_LENGTH = 100;
@@ -19,11 +32,8 @@ export function aiPhotoIds(s: TripSummary) {
   return [...new Set([...s.print.photo_ids, ...s.highlight_photo_ids, ...s.days.flatMap((d) => d.photo_ids)])];
 }
 
-// รูปเด่นขึ้นก่อน ตามด้วยรูปอื่นที่ AI คัดไว้
-export function orderedPhotos(s: TripSummary, heroId: string): PhotoItem[] {
-  const ids = aiPhotoIds(s);
-  const rest = ids.filter((id) => id !== heroId);
-  return [heroId, ...rest].map(getPhoto).filter((p): p is PhotoItem => p !== undefined);
+export function photosOf(ids: string[]): PhotoItem[] {
+  return ids.map(getPhoto).filter((p): p is PhotoItem => p !== undefined);
 }
 
 // แผ่น A4 แนวตั้ง: ขนาดทุกอย่างข้างในใช้หน่วย cqw (% ของความกว้างแผ่น) จึงย่อ/ขยายได้ทั้งแผ่น

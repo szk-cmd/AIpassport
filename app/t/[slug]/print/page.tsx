@@ -60,7 +60,7 @@ async function PrintContent({ params, searchParams }: Pick<Props, "params" | "se
       </div>
 
       <div className="mx-auto shadow-2xl print:shadow-none">
-        <Component s={s} slug={slug} text={options.text} heroId={options.heroId} />
+        <Component s={s} slug={slug} text={options.text} photoIds={options.photoIds} hidden={options.hidden} />
       </div>
 
       <div className="no-print mx-auto mt-6 max-w-md">
