@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { FlaskConical, Lock, Receipt } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button, ButtonLink, Card, Chip, EmptyState, ICON } from "@/components/ui";
 import { tripBill } from "@/lib/config";
 import { formatBaht, formatDateRange } from "@/lib/format";
 import { dayCount, todayKey, updateTrip, useStore, type StoredTrip } from "@/lib/trip-store";
@@ -31,72 +32,69 @@ export function CheckoutView() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-md px-4 py-8">
-      <p className="font-heading text-sm tracking-widest text-gold">สรุปค่าบริการ</p>
-      <h1 className="mt-1 text-2xl font-semibold">พาสปอร์ตของคุณพร้อมแล้ว</h1>
-      <p className="mt-2 text-cream/70">ชำระเงินเพื่อเปิดดูและแชร์ได้เลย</p>
+    <div className="min-h-dvh bg-canvas text-ink">
+      <main className="mx-auto w-full max-w-md px-4 pt-8 pb-8">
+        <h1 className="font-sans text-title font-semibold">พาสปอร์ตของคุณพร้อมแล้ว</h1>
+        <p className="mt-2 text-body text-ink-muted">ชำระเงินเพื่อเปิดดูและแชร์ได้เลย</p>
 
-      {/* ตัวอย่างปกแบบเบลอ */}
-      <div className="relative mt-6 aspect-[4/5] overflow-hidden rounded-3xl bg-teal shadow-2xl">
-        {cover?.thumb ? (
-          // eslint-disable-next-line @next/next/no-img-element -- รูปย่อจากแชทในเครื่อง
-          <img src={cover.thumb} alt="" className="absolute inset-0 size-full scale-110 object-cover blur-lg" />
-        ) : (
-          <div
-            className="absolute inset-0 blur-lg"
-            style={{ background: `linear-gradient(160deg, ${cover?.color ?? "#1E6B63"}, #2B2019)` }}
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/70" />
-        <div className="absolute inset-x-0 top-0 p-6 text-cream">
-          <p className="text-[10px] tracking-[0.3em] opacity-80">PASSPORT AI</p>
-          <p className="mt-1 font-heading text-3xl font-semibold drop-shadow">{trip.title}</p>
-          <p className="text-sm opacity-85">{formatDateRange(trip.start_date, endDay)}</p>
-        </div>
-        <div className="absolute inset-x-0 bottom-0 flex flex-col items-center p-6 text-center text-cream">
-          <span className="text-4xl" aria-hidden>
-            🔒
-          </span>
-          <p className="mt-2 font-heading text-lg font-semibold">ชำระเงินเพื่อเปิดดู</p>
-        </div>
-      </div>
-
-      <section className="mt-6 space-y-2 rounded-2xl bg-cream p-5 text-brown">
-        <Line label={`แพ็กเกจ ${bill.plannedDays} วัน`} value={formatBaht(bill.packagePrice)} />
-        {bill.extraDays > 0 && <Line label={`ต่อทริปเพิ่ม ${bill.extraDays} วัน`} value={formatBaht(bill.extraPrice)} />}
-        {bill.actualDays < bill.plannedDays && (
-          <p className="text-xs text-brown/60">
-            เที่ยวจริง {bill.actualDays} วัน (จบก่อนกำหนด คิดตามแพ็กเกจที่ตั้งไว้)
-          </p>
-        )}
-        <div className="flex items-baseline justify-between border-t border-brown/15 pt-3">
-          <span className="font-medium">รวม</span>
-          <span className="font-heading text-3xl font-semibold text-orange">{formatBaht(bill.total)}</span>
+        {/* ตัวอย่างปกแบบเบลอ (การ์ดปกทริป ใช้น้ำตาลแบรนด์) */}
+        <div className="relative mt-8 aspect-[4/3] overflow-hidden rounded-card bg-brown shadow-soft">
+          {cover?.thumb ? (
+            // eslint-disable-next-line @next/next/no-img-element -- รูปย่อจากแชทในเครื่อง
+            <img src={cover.thumb} alt="" className="absolute inset-0 size-full scale-110 object-cover blur-lg" />
+          ) : (
+            <div
+              className="absolute inset-0 blur-lg"
+              style={{ background: `linear-gradient(160deg, ${cover?.color ?? "#1E6B63"}, #2B2019)` }}
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-b from-brown/40 via-transparent to-brown/80" />
+          <div className="absolute inset-x-0 top-0 p-6 text-white">
+            <p className="text-heading font-semibold">{trip.title}</p>
+            <p className="text-label text-white/70">{formatDateRange(trip.start_date, endDay)}</p>
+          </div>
+          <div className="absolute inset-x-0 bottom-0 flex flex-col items-center p-6 text-center text-white">
+            <span className="flex size-12 items-center justify-center rounded-full bg-white/15">
+              <Lock {...ICON} />
+            </span>
+            <p className="mt-2 text-body font-semibold">ชำระเงินเพื่อเปิดดู</p>
+          </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handlePay}
-          disabled={paying}
-          className="mt-3 w-full rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream disabled:opacity-60"
-        >
+        <Card className="mt-6">
+          <div className="space-y-2">
+            <Line label={`แพ็กเกจ ${bill.plannedDays} วัน`} value={formatBaht(bill.packagePrice)} />
+            {bill.extraDays > 0 && (
+              <Line label={`ต่อทริปเพิ่ม ${bill.extraDays} วัน`} value={formatBaht(bill.extraPrice)} />
+            )}
+            {bill.actualDays < bill.plannedDays && (
+              <p className="text-caption text-ink-muted">
+                เที่ยวจริง {bill.actualDays} วัน (จบก่อนกำหนด คิดตามแพ็กเกจที่ตั้งไว้)
+              </p>
+            )}
+          </div>
+          <div className="mt-4 flex items-baseline justify-between border-t border-line pt-4">
+            <span className="text-body font-semibold">รวม</span>
+            <span className="text-title font-semibold">{formatBaht(bill.total)}</span>
+          </div>
+        </Card>
+
+        <Button block onClick={handlePay} disabled={paying} className="mt-6">
           {paying ? "กำลังชำระเงิน..." : `ชำระเงิน ${formatBaht(bill.total)}`}
-        </button>
-        <p className="text-center">
-          <span className="inline-block rounded-full bg-gold/25 px-3 py-0.5 text-xs text-brown/80">
-            บัญชีทดสอบ · ชำระเงินจำลอง
-          </span>
+        </Button>
+        <p className="mt-3 text-center">
+          <Chip icon={FlaskConical}>บัญชีทดสอบ · ชำระเงินจำลอง</Chip>
         </p>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }
 
 function Line({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between">
-      <span className="text-brown/80">{label}</span>
-      <span className="font-medium">{value}</span>
+    <div className="flex items-baseline justify-between text-body">
+      <span className="text-ink-muted">{label}</span>
+      <span>{value}</span>
     </div>
   );
 }
@@ -111,11 +109,17 @@ function NotReady({ trip }: { trip?: StoredTrip }) {
         ? { href: `/trip/${trip.id}/progress`, label: "ดูความคืบหน้า", text: "ชำระเงินแล้ว" }
         : { href: `/t/${trip.slug}`, label: "ดูพาสปอร์ต", text: "พาสปอร์ตเสร็จแล้ว" };
   return (
-    <main className="mx-auto w-full max-w-md px-4 py-16 text-center">
-      <p className="text-xl">{link.text}</p>
-      <Link href={link.href} className="mt-4 inline-block text-cream/70 underline">
-        {link.label}
-      </Link>
-    </main>
+    <div className="min-h-dvh bg-canvas text-ink">
+      <EmptyState
+        icon={Receipt}
+        title={link.text}
+        action={
+          <ButtonLink href={link.href} block variant="secondary">
+            {link.label}
+          </ButtonLink>
+        }
+        className="pt-24"
+      />
+    </div>
   );
 }
