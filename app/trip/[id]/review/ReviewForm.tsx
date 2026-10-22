@@ -1,16 +1,14 @@
 "use client";
 
-import Link from "next/link";
+import { BookOpen, CircleCheck, Printer } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { Photo } from "@/components/Photo";
+import { Button, ButtonLink, Card, Input, TextArea } from "@/components/ui";
 import { CATEGORY_LABELS, formatBaht, formatDate } from "@/lib/format";
 import { getPhoto, MOCK_SLUG, MOCK_SUMMARY } from "@/lib/mock";
 import { updateTrip } from "@/lib/trip-store";
 import type { DayStory, ExpenseLine, TripSummary } from "@/lib/types";
-
-const fieldClass =
-  "w-full rounded-lg border border-brown/15 bg-white px-3 py-2 text-brown outline-none focus:border-orange";
 
 export function ReviewForm() {
   const { id } = useParams<{ id: string }>();
@@ -49,127 +47,125 @@ export function ReviewForm() {
   if (done) return <ReadyScreen slug={MOCK_SLUG} title={summary.title} />;
 
   return (
-    <main className="mx-auto w-full max-w-md px-4 pt-8 pb-28">
-      <p className="font-heading text-sm tracking-widest text-gold">ขั้นที่ 3 จาก 3</p>
-      <h1 className="mt-1 text-3xl font-semibold">ตรวจทานก่อนยืนยัน</h1>
-      <p className="mt-2 text-cream/70">แก้เรื่องเล่าหรือค่าใช้จ่ายได้ตามใจ แล้วกดยืนยันด้านล่าง</p>
+    <div className="min-h-dvh bg-canvas text-ink">
+      <main className="mx-auto w-full max-w-md px-4 pt-8 pb-32">
+        <h1 className="font-sans text-title font-semibold">ตรวจทานก่อนยืนยัน</h1>
+        <p className="mt-2 text-body text-ink-muted">
+          ขั้นสุดท้าย แก้เรื่องเล่าหรือค่าใช้จ่ายได้ตามใจ แล้วกดยืนยันด้านล่าง
+        </p>
 
-      {/* ---------- เรื่องเล่ารายวัน ---------- */}
-      <section className="mt-6 space-y-4">
-        <h2 className="text-xl font-semibold">เรื่องเล่า</h2>
-        {summary.days.map((day, i) => {
-          const firstPhoto = getPhoto(day.photo_ids[0]);
-          return (
-            <article key={day.date} className="overflow-hidden rounded-2xl bg-cream text-brown">
-              {firstPhoto && <Photo photo={firstPhoto} className="h-32" />}
-              <div className="space-y-2 p-4">
-                <p className="text-sm text-teal">
-                  วันที่ {i + 1} · {formatDate(day.date)}
-                </p>
-                <input
-                  className={`${fieldClass} font-heading font-semibold`}
-                  value={day.title}
-                  onChange={(e) => updateDay(i, { title: e.target.value })}
-                  aria-label={`หัวข้อวันที่ ${i + 1}`}
-                />
-                <textarea
-                  className={`${fieldClass} min-h-36 leading-relaxed`}
-                  value={day.story}
-                  onChange={(e) => updateDay(i, { story: e.target.value })}
-                  aria-label={`เรื่องเล่าวันที่ ${i + 1}`}
-                />
-              </div>
-            </article>
-          );
-        })}
-      </section>
+        {/* ---------- เรื่องเล่ารายวัน ---------- */}
+        <section className="mt-12">
+          <h2 className="font-sans text-heading font-semibold">เรื่องเล่า</h2>
+          <div className="mt-4 space-y-4">
+            {summary.days.map((day, i) => {
+              const firstPhoto = getPhoto(day.photo_ids[0]);
+              return (
+                <Card key={day.date} padded={false} className="overflow-hidden">
+                  {firstPhoto && <Photo photo={firstPhoto} hidePlace className="h-32" />}
+                  <div className="space-y-4 p-6">
+                    <p className="text-label text-ink-muted">
+                      วันที่ {i + 1} · {formatDate(day.date)}
+                    </p>
+                    <Input
+                      value={day.title}
+                      onChange={(e) => updateDay(i, { title: e.target.value })}
+                      aria-label={`หัวข้อวันที่ ${i + 1}`}
+                      className="font-semibold"
+                    />
+                    <TextArea
+                      value={day.story}
+                      onChange={(e) => updateDay(i, { story: e.target.value })}
+                      aria-label={`เรื่องเล่าวันที่ ${i + 1}`}
+                      className="min-h-36"
+                    />
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
 
-      {/* ---------- ข้อความสั้นบนกรอบรูป ---------- */}
-      <section className="mt-6 rounded-2xl bg-cream p-4 text-brown">
-        <h2 className="text-lg font-semibold">ข้อความบนกรอบรูป</h2>
-        <p className="text-sm text-brown/60">สั้นๆ อ่านง่าย สำหรับพิมพ์ให้ผู้ใหญ่ที่บ้าน</p>
-        <textarea
-          className={`${fieldClass} mt-2 min-h-20`}
-          value={summary.print.short_text}
-          onChange={(e) =>
-            setSummary((s) => ({ ...s, print: { ...s.print, short_text: e.target.value } }))
-          }
-          aria-label="ข้อความบนกรอบรูป"
-        />
-      </section>
+        {/* ---------- ข้อความสั้นบนกรอบรูป ---------- */}
+        <section className="mt-12">
+          <h2 className="font-sans text-heading font-semibold">ข้อความบนกรอบรูป</h2>
+          <Card className="mt-4">
+            <TextArea
+              value={summary.print.short_text}
+              onChange={(e) => setSummary((s) => ({ ...s, print: { ...s.print, short_text: e.target.value } }))}
+              aria-label="ข้อความบนกรอบรูป"
+              hint="สั้นๆ อ่านง่าย สำหรับพิมพ์ให้ผู้ใหญ่ที่บ้าน"
+            />
+          </Card>
+        </section>
 
-      {/* ---------- ค่าใช้จ่าย ---------- */}
-      <section className="mt-6 rounded-2xl bg-cream p-4 text-brown">
-        <h2 className="text-lg font-semibold">ค่าใช้จ่าย</h2>
-        <ul className="mt-3 space-y-3">
-          {summary.expenses.items.map((e, i) => (
-            <li key={i}>
-              <p className="text-xs text-brown/60">{CATEGORY_LABELS[e.category]}</p>
-              <div className="mt-1 flex gap-2">
-                <input
-                  className={`${fieldClass} flex-1`}
-                  value={e.label}
-                  onChange={(ev) => updateExpense(i, { label: ev.target.value })}
-                  aria-label="รายการ"
-                />
-                <div className="w-24 shrink-0">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    className={`${fieldClass} text-right`}
-                    value={e.amount}
-                    onChange={(ev) => updateExpense(i, { amount: Number(ev.target.value) || 0 })}
-                    aria-label={`ราคา ${e.label}`}
-                  />
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-4 flex items-baseline justify-between border-t border-brown/15 pt-3">
-          <span className="font-medium">รวมทั้งทริป</span>
-          <span className="font-heading text-2xl font-semibold text-orange">{formatBaht(total)}</span>
-        </div>
-      </section>
+        {/* ---------- ค่าใช้จ่าย ---------- */}
+        <section className="mt-12">
+          <h2 className="font-sans text-heading font-semibold">ค่าใช้จ่าย</h2>
+          <Card className="mt-4">
+            <ul className="space-y-4">
+              {summary.expenses.items.map((e, i) => (
+                <li key={i}>
+                  <p className="mb-2 text-caption text-ink-muted">{CATEGORY_LABELS[e.category]}</p>
+                  <div className="flex gap-2">
+                    <div className="min-w-0 flex-1">
+                      <Input
+                        value={e.label}
+                        onChange={(ev) => updateExpense(i, { label: ev.target.value })}
+                        aria-label="รายการ"
+                      />
+                    </div>
+                    <div className="w-28 shrink-0">
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        value={e.amount}
+                        onChange={(ev) => updateExpense(i, { amount: Number(ev.target.value) || 0 })}
+                        aria-label={`ราคา ${e.label}`}
+                        className="text-right tabular-nums"
+                      />
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-6 flex items-baseline justify-between border-t border-line pt-4">
+              <span className="text-body font-semibold">รวมทั้งทริป</span>
+              <span className="text-title font-semibold">{formatBaht(total)}</span>
+            </div>
+          </Card>
+        </section>
+      </main>
 
-      <div className="fixed inset-x-0 bottom-0 bg-gradient-to-t from-brown via-brown to-transparent px-4 pt-6 pb-5">
-        <button
-          type="button"
-          onClick={handleConfirm}
-          disabled={saving}
-          className="mx-auto block w-full max-w-md rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream disabled:opacity-60"
-        >
+      <div className="fixed inset-x-0 bottom-0 border-t border-line bg-canvas/90 px-4 pt-4 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur-md">
+        <Button block onClick={handleConfirm} disabled={saving} className="mx-auto max-w-md">
           {saving ? "กำลังสร้างหนังสือเดินทาง..." : "ยืนยัน สร้างหนังสือเดินทาง"}
-        </button>
+        </Button>
       </div>
-    </main>
+    </div>
   );
 }
 
 // หลังยืนยัน: ไปดูพาสปอร์ตเป็นทางหลัก สั่งพิมพ์เป็นทางเลือก ไม่บังคับ
 function ReadyScreen({ slug, title }: { slug: string; title: string }) {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-4 py-8 text-center">
-      <span className="text-6xl" aria-hidden>
-        🛂
-      </span>
-      <h1 className="mt-4 text-3xl font-semibold">พาสปอร์ตพร้อมแล้ว</h1>
-      <p className="mt-2 text-cream/70">{title}</p>
-      <div className="mt-8 grid w-full gap-3">
-        <Link
-          href={`/t/${slug}`}
-          className="rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream"
-        >
-          ดูพาสปอร์ต
-        </Link>
-        <Link
-          href={`/t/${slug}/order`}
-          className="rounded-full border-2 border-cream/30 py-3 font-heading font-semibold hover:bg-cream/10"
-        >
-          🖨 สั่งพิมพ์กรอบรูป
-        </Link>
-      </div>
-    </main>
+    <div className="flex min-h-dvh flex-col justify-center bg-canvas text-ink">
+      <main className="mx-auto w-full max-w-md px-4 py-8 text-center">
+        <span className="mx-auto flex size-16 items-center justify-center rounded-full bg-success/10 text-success">
+          <CircleCheck size={32} strokeWidth={1.75} aria-hidden />
+        </span>
+        <h1 className="mt-6 font-sans text-title font-semibold">พาสปอร์ตพร้อมแล้ว</h1>
+        <p className="mt-2 text-body text-ink-muted">{title}</p>
+        <div className="mt-8 space-y-2">
+          <ButtonLink href={`/t/${slug}`} block icon={BookOpen}>
+            ดูพาสปอร์ต
+          </ButtonLink>
+          <ButtonLink href={`/t/${slug}/order`} block variant="secondary" icon={Printer}>
+            สั่งพิมพ์กรอบรูป
+          </ButtonLink>
+        </div>
+      </main>
+    </div>
   );
 }

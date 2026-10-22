@@ -58,3 +58,27 @@ export function Input({
     </Field>
   );
 }
+
+// ช่องข้อความหลายบรรทัด (เรื่องเล่า ข้อความบนกรอบรูป)
+export function TextArea({
+  label,
+  hint,
+  error,
+  className,
+  id,
+  ...props
+}: FieldProps & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const autoId = useId();
+  const inputId = id ?? autoId;
+  return (
+    <Field id={inputId} label={label} hint={hint} error={error}>
+      <textarea
+        id={inputId}
+        aria-invalid={Boolean(error) || undefined}
+        aria-describedby={error || hint ? `${inputId}-note` : undefined}
+        className={cx(fieldClass, "min-h-24 resize-y py-3", error && "ring-2 ring-danger", className)}
+        {...props}
+      />
+    </Field>
+  );
+}

@@ -6,7 +6,7 @@ export { Card } from "./Card";
 export { Chip } from "./Chip";
 export { DateField } from "./DateField";
 export { EmptyState } from "./EmptyState";
-export { Field, Input } from "./Input";
+export { Field, Input, TextArea } from "./Input";
 export { ListItem } from "./ListItem";
 export { Sheet } from "./Sheet";
 export { StatRow, StatTile } from "./StatTile";
