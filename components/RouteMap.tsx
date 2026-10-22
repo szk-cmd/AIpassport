@@ -30,11 +30,11 @@ export function RouteMap({ route }: { route: RoutePoint[] }) {
 
   return (
     <div>
-      <RouteMapImage route={route} className="w-full rounded-2xl" />
-      <ol className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+      <RouteMapImage route={route} tone="light" className="w-full rounded-control" />
+      <ol className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-label text-ink">
         {route.map((p, i) => (
           <li key={p.name} className="flex gap-2">
-            <span className="font-heading text-orange">{i + 1}</span>
+            <span className="font-semibold text-ink-muted tabular-nums">{i + 1}</span>
             {p.name}
           </li>
         ))}
@@ -43,30 +43,52 @@ export function RouteMap({ route }: { route: RoutePoint[] }) {
   );
 }
 
+// สีแผนที่: dark = แบบเดิม (กรอบรูปสำหรับพิมพ์), light = ระบบดีไซน์ใหม่ในหน้าเว็บ (พื้นเทาอ่อน เส้นทึบ)
+const MAP_TONES = {
+  dark: { bg: "#1E6B63", grid: "#F7F2EA", line: "#E8A93C", dash: "6 5", dot: "#E0642C", ring: "#F7F2EA" },
+  light: { bg: "#F2F1EE", grid: "#1C1917", line: "#57534E", dash: undefined, dot: "#C2410C", ring: "#FFFFFF" },
+} as const;
+
 // ภาพแผนที่อย่างเดียว (ไม่มีรายชื่อสถานที่) ใช้ในหน้าทริปและกรอบรูปสำหรับพิมพ์
-export function RouteMapImage({ route, className = "" }: { route: RoutePoint[]; className?: string }) {
+export function RouteMapImage({
+  route,
+  className = "",
+  tone = "dark",
+}: {
+  route: RoutePoint[];
+  className?: string;
+  tone?: keyof typeof MAP_TONES;
+}) {
   const points = project(route, W, H, 28);
+  const c = MAP_TONES[tone];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className={`bg-teal ${className}`} role="img" aria-label="แผนที่เส้นทาง">
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className={className}
+      style={{ background: c.bg }}
+      role="img"
+      aria-label="แผนที่เส้นทาง"
+    >
       <defs>
-        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#F7F2EA" strokeOpacity="0.08" />
+        <pattern id={`grid-${tone}`} width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke={c.grid} strokeOpacity="0.06" />
         </pattern>
       </defs>
-      <rect width={W} height={H} fill="url(#grid)" />
+      <rect width={W} height={H} fill={`url(#grid-${tone})`} />
       <polyline
         points={points.map((p) => `${p.x},${p.y}`).join(" ")}
         fill="none"
-        stroke="#E8A93C"
-        strokeWidth="2.5"
-        strokeDasharray="6 5"
+        stroke={c.line}
+        strokeWidth={tone === "light" ? 1.75 : 2.5}
+        strokeDasharray={c.dash}
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
       {points.map((p, i) => (
         <g key={p.name}>
-          <circle cx={p.x} cy={p.y} r="10" fill="#E0642C" stroke="#F7F2EA" strokeWidth="2" />
-          <text x={p.x} y={p.y + 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#F7F2EA">
+          <circle cx={p.x} cy={p.y} r="10" fill={c.dot} stroke={c.ring} strokeWidth="2" />
+          <text x={p.x} y={p.y + 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#FFFFFF">
             {i + 1}
           </text>
         </g>

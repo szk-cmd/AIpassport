@@ -1,6 +1,8 @@
 "use client";
 
+import { Check, Link2 } from "lucide-react";
 import { useState } from "react";
+import { buttonClass, cx, ICON } from "@/components/ui";
 
 // คัดลอกลิงก์หน้าทริป (ต่อหน้าด้วยโดเมนที่เปิดอยู่)
 export function CopyLinkButton({ path, className = "" }: { path: string; className?: string }) {
@@ -24,8 +26,9 @@ export function CopyLinkButton({ path, className = "" }: { path: string; classNa
   }
 
   return (
-    <button type="button" onClick={handleCopy} className={className}>
-      {copied ? "คัดลอกแล้ว ✓" : "🔗 คัดลอกลิงก์"}
+    <button type="button" onClick={handleCopy} className={cx(buttonClass({ block: true }), className)}>
+      {copied ? <Check {...ICON} /> : <Link2 {...ICON} />}
+      {copied ? "คัดลอกแล้ว" : "คัดลอกลิงก์"}
     </button>
   );
 }
