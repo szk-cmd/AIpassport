@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { ArrowLeft, Check, Clock, Download, Star } from "lucide-react";
 import { useState } from "react";
 import { Photo } from "@/components/Photo";
+import { Button, ButtonLink, Card, Chip, cx, ICON, TextArea } from "@/components/ui";
 import {
   aiPhotoIds,
   defaultPrintOptions,
@@ -79,18 +80,20 @@ export function OrderForm({ s, slug }: Props) {
     />
   );
 
+  // การ์ดตัวเลือก (ขนาด/สีกรอบ): พื้นขาว เงาเบา ที่เลือกอยู่มีวงสีแบรนด์
   const optionClass = (on: boolean) =>
-    `rounded-xl border-2 px-3 py-2 text-left transition ${
-      on ? "border-orange bg-orange/10" : "border-brown/15 bg-white hover:border-orange/50"
-    }`;
+    cx(
+      "rounded-control bg-card p-3 text-left shadow-soft ring-2 transition",
+      on ? "ring-brand" : "ring-transparent hover:ring-line",
+    );
 
   if (step === 1) {
     return (
-      <div className="mt-6 space-y-5">
-        <p className="font-heading text-sm tracking-widest text-gold">ขั้นที่ 1 จาก 2 · เลือกแบบ</p>
+      <div className="mt-8 space-y-8">
+        <p className="text-label text-ink-muted">ขั้นที่ 1 จาก 2 · เลือกแบบ</p>
 
         {/* แถบตัวอย่างทุกแบบ ใช้ข้อมูลทริปจริง เลื่อนแนวนอน */}
-        <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+        <div className="-mx-4 -mt-4 flex snap-x gap-4 overflow-x-auto px-4 pt-1 pb-2">
           {TEMPLATES.map((t) => {
             const on = t.id === options.template;
             return (
@@ -102,9 +105,10 @@ export function OrderForm({ s, slug }: Props) {
                 className="w-24 shrink-0 snap-start text-center"
               >
                 <div
-                  className={`pointer-events-none overflow-hidden rounded-md ring-offset-2 ring-offset-brown ${
-                    on ? "ring-3 ring-orange" : "opacity-75"
-                  }`}
+                  className={cx(
+                    "pointer-events-none overflow-hidden rounded-control shadow-soft ring-2 ring-offset-2 ring-offset-canvas",
+                    on ? "ring-brand" : "ring-transparent",
+                  )}
                   aria-hidden
                 >
                   <t.Component
@@ -115,7 +119,7 @@ export function OrderForm({ s, slug }: Props) {
                     hidden={options.hidden}
                   />
                 </div>
-                <span className={`mt-2 block text-sm ${on ? "font-semibold text-orange" : "text-cream/70"}`}>
+                <span className={cx("mt-2 block text-label", on ? "font-semibold text-brand" : "text-ink-muted")}>
                   {t.name}
                 </span>
               </button>
@@ -123,22 +127,22 @@ export function OrderForm({ s, slug }: Props) {
           })}
         </div>
 
-        <div className="mx-auto w-full shadow-2xl">{preview}</div>
+        <div className="mx-auto w-full overflow-hidden rounded-control shadow-soft">{preview}</div>
 
-        <section className="space-y-5 rounded-2xl bg-cream p-5 text-brown">
+        <Card className="space-y-8">
           <div>
             <div className="flex items-baseline justify-between">
-              <p className="font-medium">รูปในกรอบ</p>
-              <span className={`text-sm ${enoughPhotos ? "text-brown/60" : "font-semibold text-orange"}`}>
+              <h2 className="font-sans text-body font-semibold">รูปในกรอบ</h2>
+              <span className={cx("text-label", enoughPhotos ? "text-ink-muted" : "font-semibold text-warning")}>
                 {options.photoIds.length}/{max} รูป
               </span>
             </div>
-            <p className="text-xs text-brown/60">
+            <p className="mt-1 text-caption text-ink-muted">
               {max === 1
                 ? "แบบนี้ใช้รูปเดียว แตะเพื่อเปลี่ยนรูป"
-                : `แตะเพื่อเลือก/เอาออก (อย่างน้อย ${min} รูป) · รูปหมายเลข 1 = รูปใหญ่ กด ★ เพื่อเปลี่ยนรูปใหญ่`}
+                : `แตะเพื่อเลือก/เอาออก (อย่างน้อย ${min} รูป) · รูปหมายเลข 1 = รูปใหญ่ กดดาวเพื่อเปลี่ยนรูปใหญ่`}
             </p>
-            <div className="mt-2 grid grid-cols-4 gap-1.5">
+            <div className="mt-4 grid grid-cols-4 gap-2">
               {aiPhotoIds(s).map((id) => {
                 const photo = getPhoto(id);
                 if (!photo) return null;
@@ -153,14 +157,16 @@ export function OrderForm({ s, slug }: Props) {
                       disabled={full}
                       aria-pressed={on}
                       aria-label={photo.data.caption}
-                      className={`block w-full overflow-hidden rounded-md ${
-                        on ? "ring-3 ring-orange" : full ? "opacity-30" : "opacity-60 hover:opacity-100"
-                      }`}
+                      className={cx(
+                        "block w-full overflow-hidden rounded-control ring-2 ring-offset-2 ring-offset-card",
+                        on ? "ring-brand" : "ring-transparent",
+                        !on && (full ? "opacity-30" : "opacity-60 hover:opacity-100"),
+                      )}
                     >
                       <Photo photo={photo} hidePlace className="aspect-square" />
                     </button>
                     {on && max > 1 && (
-                      <span className="pointer-events-none absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-orange text-xs font-bold text-cream">
+                      <span className="pointer-events-none absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-brand text-caption font-semibold text-white">
                         {order + 1}
                       </span>
                     )}
@@ -168,164 +174,139 @@ export function OrderForm({ s, slug }: Props) {
                       <button
                         type="button"
                         onClick={() => makeHero(id)}
-                        className="absolute bottom-1 left-1 rounded-full bg-black/55 px-1.5 text-xs text-cream"
+                        className="absolute bottom-1 left-1 flex size-6 items-center justify-center rounded-full bg-ink/60 text-white"
                         aria-label={`ใช้ ${photo.data.caption} เป็นรูปใหญ่`}
                       >
-                        ★
+                        <Star size={12} strokeWidth={1.75} aria-hidden />
                       </button>
                     )}
                   </div>
                 );
               })}
             </div>
-            {!enoughPhotos && <p className="mt-2 text-sm text-orange">แบบนี้ต้องมีอย่างน้อย {min} รูป</p>}
+            {!enoughPhotos && <p className="mt-2 text-label text-warning">แบบนี้ต้องมีอย่างน้อย {min} รูป</p>}
           </div>
 
           <div>
-            <p className="font-medium">ข้อมูลที่แสดง</p>
-            <div className="mt-2 flex flex-wrap gap-2">
+            <h2 className="font-sans text-body font-semibold">ข้อมูลที่แสดง</h2>
+            <div className="mt-4 flex flex-wrap gap-2">
               {template.info.map((key) => {
                 const on = !options.hidden.includes(key);
                 return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => toggleInfo(key)}
-                    aria-pressed={on}
-                    className={`rounded-full border-2 px-3 py-1.5 text-sm transition ${
-                      on ? "border-teal bg-teal text-cream" : "border-brown/20 bg-white text-brown/50 line-through"
-                    }`}
-                  >
-                    {on ? "✓ " : ""}
+                  <Chip key={key} selected={on} icon={on ? Check : undefined} onClick={() => toggleInfo(key)}>
                     {INFO_LABELS[key]}
-                  </button>
+                  </Chip>
                 );
               })}
             </div>
           </div>
 
-          <label className={`block ${options.hidden.includes("text") ? "opacity-50" : ""}`}>
-            <span className="font-medium">ข้อความบนกรอบรูป</span>
-            <textarea
+          <div className={cx(options.hidden.includes("text") && "opacity-50")}>
+            <TextArea
+              label="ข้อความบนกรอบรูป"
               rows={3}
               maxLength={MAX_TEXT_LENGTH}
               value={options.text}
               onChange={(e) => update({ text: e.target.value })}
-              className="mt-1 w-full rounded-xl border border-brown/20 bg-white px-4 py-3 leading-relaxed outline-none focus:border-orange"
+              hint={`${options.text.length}/${MAX_TEXT_LENGTH} · สั้นๆ 2-3 บรรทัด อ่านง่าย`}
             />
-            <span className="block text-right text-xs text-brown/50">
-              {options.text.length}/{MAX_TEXT_LENGTH} · สั้นๆ 2-3 บรรทัด อ่านง่าย
-            </span>
-          </label>
+          </div>
+        </Card>
 
-          <button
-            type="button"
-            onClick={() => setStep(2)}
-            disabled={!enoughPhotos}
-            className="w-full rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream disabled:opacity-40"
-          >
+        <div className="space-y-2">
+          <Button block onClick={() => setStep(2)} disabled={!enoughPhotos}>
             ถัดไป เลือกขนาดและกรอบ
-          </button>
-          <Link
-            href={printHref(slug, options)}
-            className="block text-center text-sm text-brown/60 underline hover:text-orange"
-          >
-            ⬇ ดาวน์โหลด PDF ไปพิมพ์เอง
-          </Link>
-        </section>
-
-        <SkipLink slug={slug} />
+          </Button>
+          <ButtonLink href={printHref(slug, options)} block variant="ghost" icon={Download}>
+            ดาวน์โหลด PDF ไปพิมพ์เอง
+          </ButtonLink>
+          <SkipLink slug={slug} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mt-6 space-y-6">
-      <div className="flex items-baseline justify-between">
-        <p className="font-heading text-sm tracking-widest text-gold">ขั้นที่ 2 จาก 2 · ขนาดและกรอบ</p>
-        <button type="button" onClick={() => setStep(1)} className="text-sm text-cream/70 underline hover:text-cream">
-          ← เปลี่ยนแบบ
-        </button>
+    <div className="mt-8 space-y-8">
+      <div className="flex items-center justify-between">
+        <p className="text-label text-ink-muted">ขั้นที่ 2 จาก 2 · ขนาดและกรอบ</p>
+        <Button size="sm" variant="ghost" icon={ArrowLeft} onClick={() => setStep(1)}>
+          เปลี่ยนแบบ
+        </Button>
       </div>
 
       {/* ตัวอย่างกรอบรูป: template ที่เลือกในขั้น 1 ใส่กรอบตามสีที่เลือก */}
-      <div className="mx-auto w-4/5 p-[5%] shadow-2xl" style={{ background: frame.color }}>
+      <div className="mx-auto w-4/5 p-[5%] shadow-soft" style={{ background: frame.color }}>
         <div className="shadow-inner">{preview}</div>
       </div>
 
-      <section className="space-y-5 rounded-2xl bg-cream p-5 text-brown">
-        <div>
-          <p className="font-medium">ขนาด</p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {SIZES.map((x) => (
-              <button
-                key={x.id}
-                type="button"
-                onClick={() => setSizeId(x.id)}
-                aria-pressed={x.id === sizeId}
-                className={optionClass(x.id === sizeId)}
-              >
-                <span className="block font-heading font-semibold">{x.label}</span>
-                <span className="block text-xs text-brown/60">{x.note}</span>
-                <span className="mt-1 block text-sm font-semibold text-orange">{x.price}</span>
-              </button>
-            ))}
-          </div>
+      <section>
+        <h2 className="font-sans text-body font-semibold">ขนาด</h2>
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {SIZES.map((x) => (
+            <button
+              key={x.id}
+              type="button"
+              onClick={() => setSizeId(x.id)}
+              aria-pressed={x.id === sizeId}
+              className={optionClass(x.id === sizeId)}
+            >
+              <span className="block text-body font-semibold">{x.label}</span>
+              <span className="block text-caption text-ink-muted">{x.note}</span>
+              <span className="mt-2 block text-label font-semibold">{x.price}</span>
+            </button>
+          ))}
         </div>
-
-        <div>
-          <p className="font-medium">สีกรอบ</p>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {FRAMES.map((x) => (
-              <button
-                key={x.id}
-                type="button"
-                onClick={() => setFrameId(x.id)}
-                aria-pressed={x.id === frameId}
-                className={`${optionClass(x.id === frameId)} flex flex-col items-center`}
-              >
-                <span className="size-8 rounded-full border border-brown/20" style={{ background: x.color }} />
-                <span className="mt-1 text-sm">{x.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-baseline justify-between border-t border-brown/15 pt-3">
-          <span className="text-sm text-brown/70">
-            แบบ{template.name} · {size.label} · กรอบ{frame.label}
-          </span>
-          <span className="font-heading text-2xl font-semibold text-orange">{size.price}</span>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setComingSoon(true)}
-          className="w-full rounded-full bg-orange py-4 font-heading text-lg font-semibold text-cream"
-        >
-          สั่งพิมพ์
-        </button>
-        {comingSoon && (
-          <p className="rounded-lg bg-[#FCE9C2] px-3 py-2 text-center text-sm">ฟีเจอร์นี้เปิดให้บริการเร็วๆ นี้</p>
-        )}
-
-        <Link
-          href={printHref(slug, options)}
-          className="block w-full rounded-full border-2 border-brown/20 py-3 text-center font-heading font-semibold hover:bg-brown/5"
-        >
-          ⬇ ดาวน์โหลด PDF ไปพิมพ์เอง
-        </Link>
       </section>
 
-      <SkipLink slug={slug} />
+      <section>
+        <h2 className="font-sans text-body font-semibold">สีกรอบ</h2>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {FRAMES.map((x) => (
+            <button
+              key={x.id}
+              type="button"
+              onClick={() => setFrameId(x.id)}
+              aria-pressed={x.id === frameId}
+              className={cx(optionClass(x.id === frameId), "flex flex-col items-center")}
+            >
+              <span className="size-8 rounded-full shadow-soft ring-1 ring-line" style={{ background: x.color }} />
+              <span className="mt-2 text-label">{x.label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <div className="flex items-baseline justify-between">
+        <span className="text-label text-ink-muted">
+          แบบ{template.name} · {size.label} · กรอบ{frame.label}
+        </span>
+        <span className="text-title font-semibold">{size.price}</span>
+      </div>
+
+      <div className="space-y-2">
+        <Button block onClick={() => setComingSoon(true)}>
+          สั่งพิมพ์
+        </Button>
+        {comingSoon && (
+          <p className="flex items-center justify-center gap-2 rounded-control bg-warning/10 px-4 py-3 text-label text-warning">
+            <Clock {...ICON} size={16} />
+            ฟีเจอร์นี้เปิดให้บริการเร็วๆ นี้
+          </p>
+        )}
+        <ButtonLink href={printHref(slug, options)} block variant="secondary" icon={Download}>
+          ดาวน์โหลด PDF ไปพิมพ์เอง
+        </ButtonLink>
+        <SkipLink slug={slug} />
+      </div>
     </div>
   );
 }
 
 function SkipLink({ slug }: { slug: string }) {
   return (
-    <Link href={`/t/${slug}`} className="block text-center text-sm text-cream/70 underline hover:text-cream">
+    <ButtonLink href={`/t/${slug}`} block variant="ghost">
       ข้ามไปก่อน กลับไปดูพาสปอร์ต
-    </Link>
+    </ButtonLink>
   );
 }

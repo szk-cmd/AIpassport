@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { TopBar } from "@/components/ui";
 import { getTripBySlug, MOCK_TRIPS } from "@/lib/mock";
 import { OrderForm } from "./OrderForm";
 
@@ -29,14 +29,14 @@ async function OrderContent({ params }: { params: PageProps<"/t/[slug]/order">["
   if (!trip) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-md px-4 py-8">
-      <Link href={`/t/${slug}`} className="text-sm text-cream/70 hover:text-cream">
-        ← กลับหน้าทริป
-      </Link>
-      <h1 className="mt-2 text-3xl font-semibold">สั่งพิมพ์กรอบรูป</h1>
-      <p className="mt-2 text-cream/70">พิมพ์ใส่กรอบจริง ส่งถึงบ้าน เหมาะเป็นของขวัญให้ผู้ใหญ่</p>
+    <div className="min-h-dvh bg-canvas text-ink">
+      <TopBar backHref={`/t/${slug}`} title="กลับหน้าทริป" />
+      <main className="mx-auto w-full max-w-md px-4 pt-2 pb-12">
+        <h1 className="font-sans text-title font-semibold">สั่งพิมพ์กรอบรูป</h1>
+        <p className="mt-2 text-body text-ink-muted">พิมพ์ใส่กรอบจริง ส่งถึงบ้าน เหมาะเป็นของขวัญให้ผู้ใหญ่</p>
 
-      <OrderForm s={trip.summary} slug={slug} />
-    </main>
+        <OrderForm s={trip.summary} slug={slug} />
+      </main>
+    </div>
   );
 }
