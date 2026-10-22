@@ -2,13 +2,15 @@ import { Stamp, STAMP_COLORS } from "@/components/cards/Stamp";
 import { Photo } from "@/components/Photo";
 import { formatDateRange } from "@/lib/format";
 import type { TripSummary } from "@/lib/types";
-import { CornerQr, photosOf, Sheet, type TemplateProps } from "./shared";
+import { CornerQr, photosOf, Sheet, TripMap, type TemplateProps } from "./shared";
 
 // พาสปอร์ต: หน้าข้อมูลพาสปอร์ต + ตราประทับสถานที่ + แถบ MRZ ด้านล่าง
 export function Passport({ s, slug, text, photoIds, hidden }: TemplateProps) {
   const [hero] = photosOf(photoIds);
   const show = (key: TemplateProps["hidden"][number]) => !hidden.includes(key);
-  const stamps = show("stamps") ? stampsOf(s).slice(0, 3) : [];
+  // มีแผนที่ → ตราประทับเหลือ 2 อันและย่อลง ให้อยู่แถวเดียวกันได้
+  const withMap = show("map") && s.route.length > 0;
+  const stamps = show("stamps") ? stampsOf(s).slice(0, withMap ? 2 : 3) : [];
   const fields = [
     { label: "ชื่อทริป · TRIP", value: s.print.headline, big: true },
     ...(show("date") ? [{ label: "วันที่ · DATES", value: formatDateRange(s.start_date, s.end_date) }] : []),
@@ -68,15 +70,16 @@ export function Passport({ s, slug, text, photoIds, hidden }: TemplateProps) {
           )}
 
           <div className="flex min-h-0 flex-1 justify-between gap-[2cqw] pb-[3cqw]">
-            <div className="flex flex-1 items-center justify-around">
+            <div className="flex flex-1 items-center justify-around gap-[2cqw]">
+              {withMap && <TripMap s={s} className="w-[38cqw] shrink-0" />}
               {stamps.map((st, i) => (
                 <Stamp
                   key={st.label}
                   label={st.label}
                   sub={st.sub}
-                  shape={i === 1 ? "rect" : "circle"}
+                  shape={i === 1 && !withMap ? "rect" : "circle"}
                   color={STAMP_COLORS[i % 2]}
-                  className={i === 1 ? "w-[30cqw]" : "w-[25cqw]"}
+                  className={withMap ? "w-[19cqw]" : i === 1 ? "w-[30cqw]" : "w-[25cqw]"}
                 />
               ))}
             </div>

@@ -1,6 +1,6 @@
 import { Photo } from "@/components/Photo";
 import { formatDateRange } from "@/lib/format";
-import { CornerQr, photosOf, Sheet, type TemplateProps } from "./shared";
+import { CornerQr, photosOf, Sheet, TripMap, type TemplateProps } from "./shared";
 
 // มินิมอล: รูปเดียวเต็มกรอบ ชื่อสถานที่และวันที่ตัวบาง แต่ใหญ่และเข้มพออ่านง่าย
 export function Minimal({ s, slug, text, photoIds, hidden }: TemplateProps) {
@@ -10,7 +10,14 @@ export function Minimal({ s, slug, text, photoIds, hidden }: TemplateProps) {
   return (
     <Sheet className="bg-white">
       <div className="flex h-full flex-col p-[6cqw]">
-        {hero && <Photo photo={hero} hidePlace className="min-h-0 flex-1" />}
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          {hero && <Photo photo={hero} hidePlace className="min-h-0 flex-1" />}
+          {show("map") && (
+            <div className="absolute right-[3cqw] bottom-[3cqw] w-[30cqw] bg-white p-[1cqw] shadow-lg">
+              <TripMap s={s} className="w-full" caption={false} />
+            </div>
+          )}
+        </div>
 
         <div className="mt-[5cqw] flex shrink-0 items-end justify-between gap-[4cqw]">
           <div className="min-w-0">

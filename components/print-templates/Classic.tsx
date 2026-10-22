@@ -1,6 +1,6 @@
 import { Photo } from "@/components/Photo";
 import { formatDateRange } from "@/lib/format";
-import { CornerQr, photosOf, Sheet, type TemplateProps } from "./shared";
+import { CornerQr, photosOf, Sheet, TripMap, type TemplateProps } from "./shared";
 
 // คลาสสิก: รูปใหญ่ 1 + รูปเล็กสูงสุด 4 ชื่อทริปและวันที่ด้านล่าง
 export function Classic({ s, slug, text, photoIds, hidden }: TemplateProps) {
@@ -22,6 +22,8 @@ export function Classic({ s, slug, text, photoIds, hidden }: TemplateProps) {
               ))}
             </div>
           )}
+
+          {show("map") && <TripMap s={s} className="mt-[2cqw] h-[24cqw] shrink-0" caption={false} />}
 
           {show("text") && (
             <p className="mt-[3.5cqw] line-clamp-3 shrink-0 text-center font-heading text-[5cqw] leading-snug font-medium">

@@ -1,7 +1,7 @@
 import { seeded } from "@/components/cards/Stamp";
 import { Photo } from "@/components/Photo";
 import { formatDateRange } from "@/lib/format";
-import { CornerQr, photosOf, Sheet, type TemplateProps } from "./shared";
+import { CornerQr, photosOf, Sheet, TripMap, type TemplateProps } from "./shared";
 
 // โพลารอยด์: รูป 4-6 รูปเอียงเล็กน้อย มีคำบรรยายใต้รูป
 export function Polaroid({ s, slug, text, photoIds, hidden }: TemplateProps) {
@@ -44,6 +44,11 @@ export function Polaroid({ s, slug, text, photoIds, hidden }: TemplateProps) {
         </div>
 
         <div className="flex shrink-0 items-end justify-between gap-[3cqw]">
+          {show("map") && (
+            <div className="w-[25cqw] shrink-0 rotate-[-2deg] bg-white p-[1.5cqw] pb-[1cqw] shadow-[0_0.6cqw_1.6cqw_rgba(43,32,25,0.3)]">
+              <TripMap s={s} className="w-full" />
+            </div>
+          )}
           {show("text") ? (
             <p className="line-clamp-3 font-heading text-[4.6cqw] leading-snug font-medium">“{text}”</p>
           ) : (

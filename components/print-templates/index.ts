@@ -3,7 +3,7 @@ import { Classic } from "./Classic";
 import { Minimal } from "./Minimal";
 import { Passport } from "./Passport";
 import { Polaroid } from "./Polaroid";
-import { aiPhotoIds, INFO_LABELS, MAX_TEXT_LENGTH, type InfoKey, type TemplateProps } from "./shared";
+import { aiPhotoIds, DEFAULT_HIDDEN, INFO_LABELS, MAX_TEXT_LENGTH, type InfoKey, type TemplateProps } from "./shared";
 
 export { aiPhotoIds, INFO_LABELS, MAX_TEXT_LENGTH, type InfoKey, type TemplateProps };
 
@@ -15,28 +15,28 @@ export const TEMPLATES = [
     name: "คลาสสิก",
     Component: Classic,
     photos: { min: 1, max: 5 },
-    info: ["date", "text", "qr"],
+    info: ["date", "text", "map", "qr"],
   },
   {
     id: "polaroid",
     name: "โพลารอยด์",
     Component: Polaroid,
     photos: { min: 4, max: 6 },
-    info: ["date", "captions", "text", "qr"],
+    info: ["date", "captions", "text", "map", "qr"],
   },
   {
     id: "passport",
     name: "พาสปอร์ต",
     Component: Passport,
     photos: { min: 1, max: 1 },
-    info: ["date", "stats", "text", "stamps", "qr"],
+    info: ["date", "stats", "text", "stamps", "map", "qr"],
   },
   {
     id: "minimal",
     name: "มินิมอล",
     Component: Minimal,
     photos: { min: 1, max: 1 },
-    info: ["date", "text", "qr"],
+    info: ["date", "text", "map", "qr"],
   },
 ] as const satisfies readonly {
   id: string;
@@ -70,7 +70,7 @@ export function defaultPrintOptions(s: TripSummary): PrintOptions {
     template: template.id,
     photoIds: aiPhotoIds(s).slice(0, template.photos.max),
     text: s.print.short_text,
-    hidden: [],
+    hidden: DEFAULT_HIDDEN,
   };
 }
 
@@ -86,12 +86,17 @@ export function parsePrintOptions(s: TripSummary, q: Record<string, string | str
     template,
     photoIds: fitPhotos(s, template, photos.length > 0 ? photos : base.photoIds),
     text: text || base.text,
-    hidden: list(q.hide).filter((k): k is InfoKey => k in INFO_LABELS),
+    // ไม่มี hide ใน URL = ค่าเริ่มต้น, hide= (ว่าง) = แสดงทุกอย่าง
+    hidden: q.hide === undefined ? base.hidden : list(q.hide).filter((k): k is InfoKey => k in INFO_LABELS),
   };
 }
 
 export function printHref(slug: string, o: PrintOptions) {
-  const q = new URLSearchParams({ template: o.template, photos: o.photoIds.join(","), text: o.text });
-  if (o.hidden.length > 0) q.set("hide", o.hidden.join(","));
+  const q = new URLSearchParams({
+    template: o.template,
+    photos: o.photoIds.join(","),
+    text: o.text,
+    hide: o.hidden.join(","),
+  });
   return `/t/${slug}/print?${q}`;
 }
