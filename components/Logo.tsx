@@ -52,7 +52,7 @@ export function LogoTile({ size = 120 }: { size?: number }) {
 
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <span className={`font-heading font-bold tracking-tight ${className}`}>
+    <span className={`font-sans font-semibold tracking-tight ${className}`}>
       Passport <span className="text-orange">AI</span>
     </span>
   );

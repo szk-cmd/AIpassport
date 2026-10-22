@@ -30,6 +30,7 @@ import {
   Input,
   ListItem,
   Sheet,
+  StatRow,
   StatTile,
   TopBar,
 } from "@/components/ui";
@@ -217,11 +218,11 @@ export function Showcase() {
         </Section>
 
         <Section title="StatTile">
-          <div className="grid grid-cols-3 gap-2">
+          <StatRow>
             <StatTile value={3} label="ทริป" />
             <StatTile value={18} label="สถานที่" />
             <StatTile value={9} label="วันเที่ยว" />
-          </div>
+          </StatRow>
         </Section>
 
         <Section title="ListItem">

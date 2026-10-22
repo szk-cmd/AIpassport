@@ -9,6 +9,6 @@ export { EmptyState } from "./EmptyState";
 export { Field, Input } from "./Input";
 export { ListItem } from "./ListItem";
 export { Sheet } from "./Sheet";
-export { StatTile } from "./StatTile";
+export { StatRow, StatTile } from "./StatTile";
 export { IconButton, TopBar } from "./TopBar";
 export { cx, ICON } from "./utils";
