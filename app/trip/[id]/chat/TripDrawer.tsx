@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { Plus } from "lucide-react";
+import { ButtonLink, cx, ListItem, Sheet } from "@/components/ui";
 import { formatDateRange } from "@/lib/format";
 import { activeTrips, type StoreData, type StoredTrip } from "@/lib/trip-store";
 
@@ -11,7 +12,7 @@ function href(t: StoredTrip) {
   return `/trip/${t.id}/chat`; // แชทยังเปิดอ่านได้ทุกสถานะ
 }
 
-// ลิ้นชักรายการทริป (ปุ่ม ☰ ในแชท)
+// ลิ้นชักรายการทริป (ปุ่มเมนูในแชท)
 export function TripDrawer({ open, onClose, data, currentId }: Props) {
   const active = activeTrips(data);
   const others = data.trips
@@ -19,69 +20,48 @@ export function TripDrawer({ open, onClose, data, currentId }: Props) {
     .sort((a, b) => b.start_date.localeCompare(a.start_date));
 
   return (
-    <div className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`} aria-hidden={!open}>
-      <button
-        type="button"
-        onClick={onClose}
-        tabIndex={open ? 0 : -1}
-        className={`absolute inset-0 bg-black/50 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
-        aria-label="ปิด"
-      />
-      <aside
-        className={`absolute inset-y-0 left-0 flex w-4/5 max-w-xs flex-col bg-cream text-brown shadow-2xl transition-transform ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-brown/10 px-4 py-4">
-          <p className="font-heading text-lg font-semibold">ทริปของฉัน</p>
-          <button type="button" onClick={onClose} tabIndex={open ? 0 : -1} className="text-2xl" aria-label="ปิด">
-            ×
-          </button>
-        </div>
+    <Sheet open={open} onClose={onClose} title="ทริปของฉัน">
+      <ButtonLink href="/start" onClick={onClose} block variant="secondary" icon={Plus}>
+        สร้างทริปใหม่
+      </ButtonLink>
 
-        <div className="flex-1 overflow-y-auto p-3">
-          <Link
-            href="/start"
-            onClick={onClose}
-            tabIndex={open ? 0 : -1}
-            className="block rounded-xl bg-orange px-4 py-3 text-center font-semibold text-cream"
-          >
-            + สร้างทริปใหม่
-          </Link>
-
-          {active.length > 0 && (
-            <>
-              <p className="mt-5 px-2 text-xs font-semibold tracking-wider text-orange">กำลังเที่ยว</p>
-              {active.map((t) => (
-                <DrawerItem key={t.id} trip={t} current={t.id === currentId} onClose={onClose} open={open} />
-              ))}
-            </>
-          )}
-
-          {others.length > 0 && (
-            <>
-              <p className="mt-5 px-2 text-xs font-semibold tracking-wider text-brown/50">ทริปที่ผ่านมา</p>
-              {others.map((t) => (
-                <DrawerItem key={t.id} trip={t} current={t.id === currentId} onClose={onClose} open={open} />
-              ))}
-            </>
-          )}
-        </div>
-      </aside>
-    </div>
+      {active.length > 0 && (
+        <TripGroup label="กำลังเที่ยว" trips={active} currentId={currentId} onClose={onClose} />
+      )}
+      {others.length > 0 && (
+        <TripGroup label="ทริปที่ผ่านมา" trips={others} currentId={currentId} onClose={onClose} />
+      )}
+    </Sheet>
   );
 }
 
-function DrawerItem({ trip, current, onClose, open }: { trip: StoredTrip; current: boolean; onClose: () => void; open: boolean }) {
+function TripGroup({
+  label,
+  trips,
+  currentId,
+  onClose,
+}: {
+  label: string;
+  trips: StoredTrip[];
+  currentId: string;
+  onClose: () => void;
+}) {
   return (
-    <Link
-      href={href(trip)}
-      onClick={onClose}
-      tabIndex={open ? 0 : -1}
-      className={`mt-1 block rounded-xl px-3 py-2.5 ${current ? "bg-orange/15" : "hover:bg-brown/5"}`}
-    >
-      <p className="truncate font-medium">{trip.title}</p>
-      <p className="text-xs text-brown/60">{formatDateRange(trip.start_date, trip.end_date)}</p>
-    </Link>
+    <section className="mt-6">
+      <h3 className="mb-1 font-sans text-caption font-semibold text-ink-muted">{label}</h3>
+      <ul className="-mx-4">
+        {trips.map((t) => (
+          // ปิดลิ้นชักเมื่อเลือกทริป (คลิกที่แถวทั้งแถว)
+          <li key={t.id} onClick={onClose}>
+            <ListItem
+              href={href(t)}
+              title={t.title}
+              subtitle={formatDateRange(t.start_date, t.end_date)}
+              className={cx(t.id === currentId && "bg-surface")}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

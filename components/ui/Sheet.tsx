@@ -1,11 +1,15 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { IconButton } from "./TopBar";
 import { cx, ICON } from "./utils";
 
+const noop = () => () => {};
+
 // ลิ้นชัก: เลื่อนออกจากซ้าย (เช่นรายการทริป) หรือจากล่าง (เช่นตัวเลือก) กด Esc หรือแตะพื้นหลังเพื่อปิด
+// วาดที่ <body> (portal) จะได้ทับทุกอย่างรวมแถบเมนูล่าง แม้ถูกวางในกล่อง fixed
 export function Sheet({
   open,
   onClose,
@@ -19,6 +23,9 @@ export function Sheet({
   side?: "left" | "bottom";
   children: React.ReactNode;
 }) {
+  // วาด portal ได้เฉพาะในเบราว์เซอร์ (ตอน render ฝั่ง server ยังไม่มี document)
+  const inBrowser = useSyncExternalStore(noop, () => true, () => false);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -26,7 +33,8 @@ export function Sheet({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  return (
+  if (!inBrowser) return null;
+  return createPortal(
     <div className={cx("fixed inset-0 z-50", !open && "pointer-events-none")} aria-hidden={!open}>
       <div
         onClick={onClose}
@@ -56,6 +64,7 @@ export function Sheet({
         </div>
         <div className="flex-1 overflow-y-auto px-4 pb-4">{children}</div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }
