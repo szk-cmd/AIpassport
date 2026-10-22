@@ -27,6 +27,13 @@
 - components/ui: Button/ButtonLink (primary/secondary/ghost, disabled = พื้นเทาอ่อน ตัวหนังสือเทา), Input, DateField,
   Card, Chip, StatTile, ListItem, EmptyState, TopBar/IconButton, BottomTabBar, Sheet (ซ้าย/ล่าง), Avatar
 - หัวข้อใน components/ui ใส่ font-sans เอง (กฎ h1-h3 ใน globals.css อยู่ใน @layer base จึงถูก class ทับได้)
+- กฎหน้าจอ: พื้นสว่าง (bg-canvas) เป็นหลัก น้ำตาลเข้มเฉพาะการ์ดปกทริป ตราประทับ และหน้า login,
+  ห้ามเส้นประ, หน้าละปุ่มหลัก (primary) 1 ปุ่ม, หัวหน้าจอชิดซ้ายไม่มี eyebrow ภาษาอังกฤษ,
+  ชิปสถานที่ = Chip + MapPin, ตัวเลขสรุป = StatRow/StatTile, แชท: ผู้ใช้ bg-brand ตัวขาว / บอท bg-surface
+- ย้ายมาระบบใหม่แล้ว: หน้าแรก+login, BottomNav, แชท (+/chat, ลิ้นชัก), /start, checkout, review (+หน้าพร้อมแล้ว),
+  /t/[slug], /t/[slug]/order — แต่ละหน้าห่อด้วย min-h-dvh bg-canvas เอง
+  ยังไม่ย้าย: /trip/[id]/photos, progress, confirm, /profile, /dev (body ยังเป็นพื้นน้ำตาลจนกว่าจะย้ายครบ)
+  print / social เป็นไฟล์ output (กรอบรูป/การ์ดโซเชียล) ไม่ได้ใช้ระบบดีไซน์นี้
 - ฟอนต์ Prompt ยังโหลดอยู่จนกว่าหน้าเดิมจะย้ายมาใช้ระบบใหม่ครบ แล้วค่อยตัดออก
 - แก้ globals.css แล้วต้องหยุด dev → ลบ .next/dev → npm run dev ใหม่ (ไม่ต้องลบ .next ทั้งหมด build production อยู่ในนั้น)
 
