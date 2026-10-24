@@ -7,7 +7,7 @@
   --color-orange: #e0642c;
   --color-teal: #1e6b63;
   --color-gold: #e8a93c;
-  --font-sans: var(--font-plex-thai), sans-serif;
+  --font-sans: var(--font-noto-thai), sans-serif;
   --font-heading: var(--font-prompt), sans-serif;
 }
 

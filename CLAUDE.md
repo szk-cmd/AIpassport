@@ -21,7 +21,7 @@
   bg-canvas #FAFAF9, bg-surface #F2F1EE, bg-card #FFF, text-ink #1C1917 / ink-muted #57534E / ink-faint #A8A29E,
   border-line #E7E5E4 (ใช้น้อยที่สุด), brand #C2410C (เฉพาะปุ่มหลัก ลิงก์ active), bg-brown #2B2019 (เฉพาะการ์ดปกทริป/ตราประทับ),
   success #15803D, warning #B45309, danger #B91C1C
-- ตัวอักษร IBM Plex Sans Thai: text-title 28 / heading 20 / body 16 / label 14 / caption 12, น้ำหนัก 400 กับ 600 เท่านั้น
+- ตัวอักษร Noto Sans Thai (sans-serif ไม่มีหัว): text-title 28 / heading 20 / body 16 / label 14 / caption 12, น้ำหนัก 400 กับ 600 เท่านั้น
 - ระยะ 8px (2/4/6/8/12 ของ Tailwind), มุม rounded-control 8 / rounded-card 16 / rounded-full ชิป, เงาเดียว shadow-soft
 - ไอคอน lucide-react 20px เส้น 1.75 (ส่ง {...ICON}) ห้ามใช้ emoji บนหน้าจอ
 - components/ui: Button/ButtonLink (primary/secondary/ghost, disabled = พื้นเทาอ่อน ตัวหนังสือเทา), Input, DateField,
@@ -39,7 +39,7 @@
 
 ## โทนดีไซน์ (เดิม ใช้ในหน้าที่ยังไม่ได้รีดีไซน์)
 พื้นน้ำตาลเข้ม #2B2019, ครีม #F7F2EA, ส้ม #E0642C, เขียวอมฟ้า #1E6B63, เหลืองทอง #E8A93C
-ฟอนต์ Prompt (หัวข้อ) + IBM Plex Sans Thai (เนื้อหา) จาก Google Fonts
+ฟอนต์ Prompt (หัวข้อ) + Noto Sans Thai (เนื้อหา) จาก Google Fonts
 
 ## การคิดเงิน (lib/config.ts)
 PRICE_PER_DAY (ยังไม่ใช่ราคาจริง) คิดรายวัน ไม่มีแพ็กเกจ Free/Plus แล้ว

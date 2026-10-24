@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans_Thai, Prompt } from "next/font/google";
+import { Noto_Sans_Thai, Prompt } from "next/font/google";
 import { Suspense } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import "./globals.css";
@@ -11,9 +11,9 @@ const prompt = Prompt({
   weight: ["300", "500", "600", "700"], // 300 ใช้ในกรอบรูปแบบ minimal
 });
 
-// ฟอนต์เนื้อหา
-const plexThai = IBM_Plex_Sans_Thai({
-  variable: "--font-plex-thai",
+// ฟอนต์หลักของแอป (sans-serif ไม่มีหัว) ระบบดีไซน์ใช้ 400/600, 500 เผื่อหน้าที่ยังไม่ได้รีดีไซน์
+const notoThai = Noto_Sans_Thai({
+  variable: "--font-noto-thai",
   subsets: ["thai", "latin"],
   weight: ["400", "500", "600"],
 });
@@ -31,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="th"
-      className={`${prompt.variable} ${plexThai.variable} h-full antialiased`}
+      className={`${prompt.variable} ${notoThai.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         {children}

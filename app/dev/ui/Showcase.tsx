@@ -94,7 +94,7 @@ export function Showcase() {
           </div>
         </Section>
 
-        <Section title="ตัวอักษร" note="IBM Plex Sans Thai ทั้งแอป 5 ระดับ น้ำหนัก 400 และ 600">
+        <Section title="ตัวอักษร" note="Noto Sans Thai ทั้งแอป 5 ระดับ น้ำหนัก 400 และ 600">
           <Card className="space-y-4">
             {TYPE.map((t) => (
               <div key={t.name}>
