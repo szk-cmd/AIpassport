@@ -1,50 +1,75 @@
 "use client";
 
 import { BookOpen, CircleCheck, Printer } from "lucide-react";
-import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Photo } from "@/components/Photo";
 import { Button, ButtonLink, Card, Input, TextArea } from "@/components/ui";
 import { CATEGORY_LABELS, formatBaht, formatDate } from "@/lib/format";
-import { getPhoto, MOCK_SLUG, MOCK_SUMMARY } from "@/lib/mock";
-import { updateTrip } from "@/lib/trip-store";
+import { photoOf } from "@/lib/summary";
+import { refreshStore } from "@/lib/trip-store";
 import type { DayStory, ExpenseLine, TripSummary } from "@/lib/types";
 
 export function ReviewForm() {
   const { id } = useParams<{ id: string }>();
-  // MOCK: เก็บการแก้ไขไว้ใน state ของหน้านี้เท่านั้น ยังไม่บันทึกลง DB
-  const [summary, setSummary] = useState<TripSummary>(MOCK_SUMMARY);
+  const router = useRouter();
+  // ผลสรุปจริงของทริปนี้ (trip_outputs) แก้ในหน้านี้ก่อน แล้วค่อยบันทึกตอนกดยืนยัน
+  const [summary, setSummary] = useState<TripSummary | null>(null);
   const [saving, setSaving] = useState(false);
-  const [done, setDone] = useState(false);
+  const [error, setError] = useState(false);
+  const [slug, setSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/trips/${id}/output`, { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data: { summary: TripSummary }) => setSummary(data.summary))
+      // ยังสรุปไม่เสร็จ → กลับไปหน้าความคืบหน้า
+      .catch(() => router.replace(`/trip/${id}/progress`));
+  }, [id, router]);
+
+  if (slug && summary) return <ReadyScreen slug={slug} title={summary.title} />;
+  if (!summary) {
+    return <div className="min-h-dvh bg-canvas" aria-busy="true" />;
+  }
 
   const total = summary.expenses.items.reduce((sum, e) => sum + e.amount, 0);
 
   function updateDay(index: number, change: Partial<DayStory>) {
-    setSummary((s) => ({
-      ...s,
-      days: s.days.map((d, i) => (i === index ? { ...d, ...change } : d)),
-    }));
+    setSummary((s) => s && { ...s, days: s.days.map((d, i) => (i === index ? { ...d, ...change } : d)) });
   }
 
   function updateExpense(index: number, change: Partial<ExpenseLine>) {
-    setSummary((s) => ({
-      ...s,
-      expenses: {
-        ...s.expenses,
-        items: s.expenses.items.map((e, i) => (i === index ? { ...e, ...change } : e)),
-      },
-    }));
+    setSummary(
+      (s) =>
+        s && {
+          ...s,
+          expenses: {
+            ...s.expenses,
+            items: s.expenses.items.map((e, i) => (i === index ? { ...e, ...change } : e)),
+          },
+        },
+    );
   }
 
-  function handleConfirm() {
+  // Agent 05: บันทึกสิ่งที่แก้ สร้าง slug ปิดทริป
+  async function handleConfirm() {
     setSaving(true);
-    // MOCK: ของจริงจะบันทึก summary แล้วเรียก agent 05 สร้าง slug + QR
-    // ตอนนี้ทุกทริปชี้ไปพาสปอร์ตตัวอย่าง
-    updateTrip(id, { status: "completed", slug: MOCK_SLUG });
-    setTimeout(() => setDone(true), 800);
+    setError(false);
+    try {
+      const res = await fetch(`/api/trips/${id}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ summary }),
+      });
+      if (!res.ok) throw new Error();
+      const data = (await res.json()) as { slug: string };
+      await refreshStore();
+      setSlug(data.slug);
+    } catch {
+      setError(true);
+      setSaving(false);
+    }
   }
-
-  if (done) return <ReadyScreen slug={MOCK_SLUG} title={summary.title} />;
 
   return (
     <div className="min-h-dvh bg-canvas text-ink">
@@ -59,7 +84,7 @@ export function ReviewForm() {
           <h2 className="font-sans text-heading font-semibold">เรื่องเล่า</h2>
           <div className="mt-4 space-y-4">
             {summary.days.map((day, i) => {
-              const firstPhoto = getPhoto(day.photo_ids[0]);
+              const firstPhoto = photoOf(summary, day.photo_ids[0]);
               return (
                 <Card key={day.date} padded={false} className="overflow-hidden">
                   {firstPhoto && <Photo photo={firstPhoto} hidePlace className="h-32" />}
@@ -92,7 +117,7 @@ export function ReviewForm() {
           <Card className="mt-4">
             <TextArea
               value={summary.print.short_text}
-              onChange={(e) => setSummary((s) => ({ ...s, print: { ...s.print, short_text: e.target.value } }))}
+              onChange={(e) => setSummary((s) => s && { ...s, print: { ...s.print, short_text: e.target.value } })}
               aria-label="ข้อความบนกรอบรูป"
               hint="สั้นๆ อ่านง่าย สำหรับพิมพ์ให้ผู้ใหญ่ที่บ้าน"
             />
@@ -142,6 +167,7 @@ export function ReviewForm() {
         <Button block onClick={handleConfirm} disabled={saving} className="mx-auto max-w-md">
           {saving ? "กำลังสร้างหนังสือเดินทาง..." : "ยืนยัน สร้างหนังสือเดินทาง"}
         </Button>
+        {error && <p className="mt-2 text-center text-label text-danger">บันทึกไม่สำเร็จ ลองกดยืนยันอีกครั้งนะ</p>}
       </div>
     </div>
   );

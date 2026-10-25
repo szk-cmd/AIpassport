@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Photo } from "@/components/Photo";
 import { ButtonLink, Card, Chip, EmptyState, ICON, ListItem, StatRow, StatTile } from "@/components/ui";
 import { formatDateRange } from "@/lib/format";
-import { getPhoto, getTripBySlug, MOCK_SLUG } from "@/lib/mock";
+import { MOCK_SLUG } from "@/lib/mock";
 import { activeTrips, dayCount, todayKey, useStore, type StoreData, type StoredTrip } from "@/lib/trip-store";
 
 const STATUS_LABEL = { ended: "รอชำระเงิน", paid: "กำลังสร้างพาสปอร์ต", completed: null, active: null } as const;
@@ -116,10 +116,9 @@ function ActiveCard({ trip, data }: { trip: StoredTrip; data: StoreData }) {
   );
 }
 
-// ตัวเลขสรุป + ชิปสถานที่ที่เคยไป (นับจากทริปที่สรุปแล้ว)
+// ตัวเลขสรุป + ชิปสถานที่ที่เคยไป (จากผลสรุปของแต่ละทริป)
 function Summary({ trips }: { trips: StoredTrip[] }) {
-  const summaries = trips.map((t) => (t.slug ? getTripBySlug(t.slug)?.summary : undefined)).filter((s) => s !== undefined);
-  const places = [...new Set(summaries.flatMap((s) => s.route.map((p) => p.name)))];
+  const places = [...new Set(trips.flatMap((t) => t.places))];
   const days = trips.reduce((sum, t) => sum + dayCount(t.start_date, t.end_date), 0);
 
   return (
@@ -143,8 +142,7 @@ function Summary({ trips }: { trips: StoredTrip[] }) {
 }
 
 function PastTripRow({ trip, data }: { trip: StoredTrip; data: StoreData }) {
-  const summary = trip.slug ? getTripBySlug(trip.slug)?.summary : undefined;
-  const cover = summary ? getPhoto(summary.cover_photo_id) : undefined;
+  const cover = trip.cover;
   const chatPhoto = data.messages[trip.id]?.flatMap((m) => m.photos ?? [])[0];
   const label = STATUS_LABEL[trip.status];
 

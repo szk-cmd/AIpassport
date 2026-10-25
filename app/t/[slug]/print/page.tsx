@@ -3,15 +3,12 @@ import Link from "next/link";
 import { PrintButton } from "@/components/PrintButton";
 import { getTemplate, parsePrintOptions } from "@/components/print-templates";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
-import { getTripBySlug, MOCK_TRIPS } from "@/lib/mock";
-
-export function generateStaticParams() {
-  return MOCK_TRIPS.map((t) => ({ slug: t.slug }));
-}
+import { getSummaryBySlug } from "@/lib/trips-server";
 
 export async function generateMetadata({ params }: PageProps<"/t/[slug]/print">): Promise<Metadata> {
-  const trip = getTripBySlug((await params).slug);
+  const trip = await getSummaryBySlug((await params).slug);
   return { title: `กรอบรูป ${trip?.summary.title ?? ""} – PassportAI` };
 }
 
@@ -41,7 +38,8 @@ export default function PrintPage({ params, searchParams }: Props) {
 // template / รูปเด่น / ข้อความ มาจากหน้าสั่งพิมพ์ทาง URL ถ้าไม่มีใช้ค่าตั้งต้น
 async function PrintContent({ params, searchParams }: Pick<Props, "params" | "searchParams">) {
   const { slug } = await params;
-  const trip = getTripBySlug(slug); // MOCK: ของจริงจะดึงจาก DB
+  await connection();
+  const trip = await getSummaryBySlug(slug); // trip_outputs ของทริปนั้น (ทริปเดโมใช้ข้อมูล seed)
   if (!trip) notFound();
   const s = trip.summary;
   const options = parsePrintOptions(s, await searchParams);

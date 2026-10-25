@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DEMO_IDS } from "@/lib/demo-ids";
 import { MOCK_SLUG, MOCK_TRIP } from "@/lib/mock";
 import { DEMO_ACTIVE_ID, DEMO_IDLE_ID } from "@/lib/mock-active";
 
 export const metadata: Metadata = { title: "Dev – PassportAI" };
 
-const id = MOCK_TRIP.id;
+// หน้า confirm ยังเป็นตัวอย่างเดิม (ไม่อยู่ใน flow) progress/review ใช้ทริปเดโมจริงในฐานข้อมูล
+const id = DEMO_IDS.chiangmai;
 
 const GROUPS = [
   {

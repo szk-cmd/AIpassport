@@ -4,7 +4,7 @@ import { CornerQr, photosOf, Sheet, TripMap, type TemplateProps } from "./shared
 
 // มินิมอล: รูปเดียวเต็มกรอบ ชื่อสถานที่และวันที่ตัวบาง แต่ใหญ่และเข้มพออ่านง่าย
 export function Minimal({ s, slug, text, photoIds, hidden }: TemplateProps) {
-  const [hero] = photosOf(photoIds);
+  const [hero] = photosOf(s, photoIds);
   const show = (key: TemplateProps["hidden"][number]) => !hidden.includes(key);
 
   return (

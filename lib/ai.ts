@@ -10,7 +10,10 @@ import type { ExpenseCategory, Extracted } from "./types";
 export type AiProvider = "mock" | "gemini" | "anthropic";
 
 // รูปที่แนบ (ดึงจาก Supabase Storage ฝั่ง server ดู lib/storage-server.ts) Gemini ใช้ความละเอียดกลางเพื่อประหยัดโควตา
-export type AiAttachment = { mimeType: "image/jpeg" | "image/png" | "image/webp"; data: string }; // base64 ไม่มี "data:..." นำหน้า
+export type AiAttachment = {
+  mimeType: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+  data: string; // base64 ไม่มี "data:..." นำหน้า
+};
 export type AiMessage = { role: "user" | "assistant"; text: string };
 
 const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"; // Flash ล่าสุดที่มี free tier (ต.ค. 2026)
@@ -143,7 +146,36 @@ ${options.context}` : EXTRACT_SYSTEM;
   }
 }
 
-// ---------- 3) สร้างข้อความ (Agent 02-04) ----------
+// ---------- 3) สร้าง JSON ตาม schema (Agent 01-03 ตอนสรุปทริป) ----------
+
+// ไม่มีโหมดปลอม: ไม่ได้ตั้งค่า AI = โยน AiError ให้หน้า progress แจ้งผู้ใช้ (ห้ามใช้ข้อมูลเดโมแทนผลจริง)
+// lowResImages: รูปละ ~64 token ใช้ตอนดูรูปย่อจำนวนมาก (คัดรูป) แทน ~256 token
+export async function generateJson(
+  input: { text: string; attachments?: AiAttachment[] },
+  options: { system: string; schema: Record<string, unknown>; lowResImages?: boolean },
+): Promise<unknown> {
+  const { provider, model } = aiInfo();
+  if (provider === "mock") throw new AiError("ยังไม่ได้ตั้งค่า AI ของระบบ จึงสรุปทริปไม่ได้");
+  const messages: AiMessage[] = [{ role: "user", text: input.text }];
+  const files = safeAttachments(input.attachments ?? []);
+  try {
+    const raw =
+      provider === "gemini"
+        ? await geminiGenerate(
+            model!,
+            toGeminiContents(messages, files),
+            options.system,
+            options.schema,
+            options.lowResImages ? MediaResolution.MEDIA_RESOLUTION_LOW : MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+          )
+        : await anthropicGenerate(model!, toAnthropicMessages(messages, files), options.system, "medium", options.schema);
+    return JSON.parse(raw);
+  } catch (error) {
+    throw toAiError(error);
+  }
+}
+
+// ---------- 4) สร้างข้อความ ----------
 
 export async function generateText(prompt: string, options: { system?: string } = {}): Promise<string> {
   const { provider, model } = aiInfo();
@@ -171,12 +203,18 @@ function toGeminiContents(messages: AiMessage[], images: AiAttachment[]): Conten
 }
 
 // ลองรุ่นหลักก่อน ถ้ายังคนใช้เยอะหลังลองซ้ำแล้ว ค่อยเปลี่ยนไปรุ่นสำรอง
-async function geminiGenerate(model: string, contents: Content[], system?: string, jsonSchema?: object) {
+async function geminiGenerate(
+  model: string,
+  contents: Content[],
+  system?: string,
+  jsonSchema?: object,
+  resolution = MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+) {
   const fallback = process.env.GEMINI_FALLBACK_MODEL || DEFAULT_GEMINI_FALLBACK_MODEL;
   const models = fallback && fallback !== model ? [model, fallback] : [model];
   for (const [i, m] of models.entries()) {
     try {
-      return await geminiGenerateOnce(m, contents, system, jsonSchema);
+      return await geminiGenerateOnce(m, contents, system, jsonSchema, resolution);
     } catch (error) {
       const busy = error instanceof ApiError && (error.status === 429 || error.status === 503);
       if (!busy || i === models.length - 1) throw error;
@@ -186,14 +224,20 @@ async function geminiGenerate(model: string, contents: Content[], system?: strin
   throw new AiError(ERROR_MESSAGE); // ไม่ถึงตรงนี้
 }
 
-async function geminiGenerateOnce(model: string, contents: Content[], system?: string, jsonSchema?: object) {
+async function geminiGenerateOnce(
+  model: string,
+  contents: Content[],
+  system: string | undefined,
+  jsonSchema: object | undefined,
+  resolution: MediaResolution,
+) {
   const response = await geminiClient().models.generateContent({
     model,
     contents,
     config: {
       systemInstruction: system,
-      // รูปละ ~256 token ไม่ว่ารูปจะใหญ่แค่ไหน (รูปที่อัปโหลดกว้างได้ถึง 1600px)
-      mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+      // MEDIUM รูปละ ~256 token ไม่ว่ารูปจะใหญ่แค่ไหน (รูปที่อัปโหลดกว้างได้ถึง 1600px)
+      mediaResolution: resolution,
       ...(jsonSchema && { responseMimeType: "application/json", responseJsonSchema: jsonSchema }),
     },
   });
@@ -212,10 +256,11 @@ function toAnthropicMessages(messages: AiMessage[], images: AiAttachment[]): Ant
     return {
       role: "user",
       content: [
-        ...images.map((a) => ({
-          type: "image" as const,
-          source: { type: "base64" as const, media_type: a.mimeType, data: a.data },
-        })),
+        ...images.map((a): Anthropic.Beta.BetaContentBlockParam =>
+          a.mimeType === "application/pdf"
+            ? { type: "document", source: { type: "base64", media_type: a.mimeType, data: a.data } }
+            : { type: "image", source: { type: "base64", media_type: a.mimeType, data: a.data } },
+        ),
         { type: "text" as const, text: m.text },
       ],
     };

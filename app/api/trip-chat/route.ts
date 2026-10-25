@@ -16,7 +16,7 @@ const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export async function POST(request: Request) {
   const parsed = parse(await request.json().catch(() => null));
   if (!parsed) return Response.json({ error: "ข้อมูลไม่ถูกต้อง" }, { status: 400 });
-  const images = await Promise.all(parsed.imageUrls.map(fetchTripImage));
+  const images = await Promise.all(parsed.imageUrls.map((url) => fetchTripImage(url)));
   const attachments = images.filter((a) => a !== null);
   const input: MemoryCollectionInput = { ...parsed.input, message: { ...parsed.input.message, attachments } };
   return Response.json(await runMemoryCollection(input));

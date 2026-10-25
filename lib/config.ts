@@ -6,6 +6,9 @@ export const PRICE_PER_DAY = 39;
 
 export const MAX_FILE_MB = 10;
 
+// ข้อความสั้นบนกรอบรูป (2-3 บรรทัด) ใช้ทั้งตอน AI เขียนและตอนผู้ใช้แก้
+export const MAX_TEXT_LENGTH = 100;
+
 // เพดานรูปที่ส่งให้ AI ต่อทริป (คุมต้นทุนหลังบ้าน) ไม่ว่าผู้ใช้จะอัปโหลดมากี่รูป
 export const MAX_AI_PHOTOS_PER_TRIP = 100;
 

@@ -4,7 +4,7 @@ import { CornerQr, photosOf, Sheet, TripMap, type TemplateProps } from "./shared
 
 // คลาสสิก: รูปใหญ่ 1 + รูปเล็กสูงสุด 4 ชื่อทริปและวันที่ด้านล่าง
 export function Classic({ s, slug, text, photoIds, hidden }: TemplateProps) {
-  const [hero, ...rest] = photosOf(photoIds);
+  const [hero, ...rest] = photosOf(s, photoIds);
   const small = rest.slice(0, 4);
   const show = (key: TemplateProps["hidden"][number]) => !hidden.includes(key);
 

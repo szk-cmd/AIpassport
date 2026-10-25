@@ -15,6 +15,7 @@ export type PreparedFile = {
   kind: "image" | "pdf";
   blob: Blob; // ไฟล์ที่จะอัปโหลด (รูปที่ย่อแล้ว หรือไฟล์เดิมถ้าย่อไม่ได้)
   previewUrl: string | null;
+  thumb: string | null; // รูปย่อ 320px (data URL) ให้ AI คัดรูปตอนสรุปทริป
   takenAt: string | null; // YYYY-MM-DD ตามเวลาท้องถิ่นที่ถ่าย, null = ไม่มี EXIF
   lat: number | null;
   lng: number | null;
@@ -91,12 +92,14 @@ export async function prepareFile(file: File): Promise<PreparedFile | null> {
 
   if (file.type === "application/pdf") {
     if (file.size > MAX_BYTES) return null;
-    return { ...base, kind: "pdf", blob: file, previewUrl: null, takenAt: null, lat: null, lng: null };
+    return { ...base, kind: "pdf", blob: file, previewUrl: null, thumb: null, takenAt: null, lat: null, lng: null };
   }
 
   const exif = await readExif(file); // ก่อนย่อเสมอ
   const bitmap = await decodeImage(file);
-  const resized = bitmap ? await toJpeg(bitmap, MAX_SIDE) : null;
+  const [resized, thumbBlob] = bitmap
+    ? await Promise.all([toJpeg(bitmap, MAX_SIDE), toJpeg(bitmap, THUMB_SIDE, 0.7)])
+    : [null, null];
   bitmap?.close();
   if (!resized && file.size > MAX_BYTES) return null;
 
@@ -105,6 +108,7 @@ export async function prepareFile(file: File): Promise<PreparedFile | null> {
     kind: "image",
     blob: resized ?? file,
     previewUrl: resized ? URL.createObjectURL(resized) : null,
+    thumb: thumbBlob ? await toDataUrl(thumbBlob) : null,
     ...exif,
   };
 }

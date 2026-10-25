@@ -139,4 +139,8 @@ export type TripSummary = {
   };
   // ได้หลังผู้ใช้ยืนยัน (agent 05)
   share: { slug: string } | null;
+  // รูปทั้งหมดที่ summary อ้างถึง (ทริปจริง) ทริปเดโมเดิมไม่มีช่องนี้ ใช้รูปจาก lib/mock.ts
+  photos?: SummaryPhoto[];
 };
+
+export type SummaryPhoto = { id: string; file_url: string | null; data: PhotoData };

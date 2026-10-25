@@ -6,7 +6,7 @@ import { CornerQr, photosOf, Sheet, TripMap, type TemplateProps } from "./shared
 
 // พาสปอร์ต: หน้าข้อมูลพาสปอร์ต + ตราประทับสถานที่ + แถบ MRZ ด้านล่าง
 export function Passport({ s, slug, text, photoIds, hidden }: TemplateProps) {
-  const [hero] = photosOf(photoIds);
+  const [hero] = photosOf(s, photoIds);
   const show = (key: TemplateProps["hidden"][number]) => !hidden.includes(key);
   // มีแผนที่ → ตราประทับเหลือ 2 อันและย่อลง ให้อยู่แถวเดียวกันได้
   const withMap = show("map") && s.route.length > 0;

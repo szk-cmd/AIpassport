@@ -5,7 +5,7 @@ import { CornerQr, photosOf, Sheet, TripMap, type TemplateProps } from "./shared
 
 // โพลารอยด์: รูป 4-6 รูปเอียงเล็กน้อย มีคำบรรยายใต้รูป
 export function Polaroid({ s, slug, text, photoIds, hidden }: TemplateProps) {
-  const photos = photosOf(photoIds).slice(0, 6);
+  const photos = photosOf(s, photoIds).slice(0, 6);
   const show = (key: TemplateProps["hidden"][number]) => !hidden.includes(key);
   const threeCols = photos.length > 4;
 

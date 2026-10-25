@@ -4,16 +4,14 @@ import { Photo } from "@/components/Photo";
 import { RouteLine } from "@/components/RouteMap";
 import { formatDateRange } from "@/lib/format";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
-import { getPhoto, getTripBySlug, MOCK_TRIPS } from "@/lib/mock";
+import { photoOf } from "@/lib/summary";
+import { getSummaryBySlug } from "@/lib/trips-server";
 import type { TripSummary } from "@/lib/types";
 
-export function generateStaticParams() {
-  return MOCK_TRIPS.map((t) => ({ slug: t.slug }));
-}
-
 export async function generateMetadata({ params }: PageProps<"/t/[slug]/social">): Promise<Metadata> {
-  const trip = getTripBySlug((await params).slug);
+  const trip = await getSummaryBySlug((await params).slug);
   return { title: `การ์ดโซเชียล ${trip?.summary.title ?? ""} – PassportAI` };
 }
 
@@ -31,7 +29,8 @@ export default function SocialPage({ params }: PageProps<"/t/[slug]/social">) {
 
 async function SocialContent({ params }: { params: PageProps<"/t/[slug]/social">["params"] }) {
   const { slug } = await params;
-  const trip = getTripBySlug(slug); // MOCK: ของจริงจะดึงจาก DB
+  await connection();
+  const trip = await getSummaryBySlug(slug); // trip_outputs ของทริปนั้น (ทริปเดโมใช้ข้อมูล seed)
   if (!trip) notFound();
   const s = trip.summary;
 
@@ -125,7 +124,7 @@ function Stats({ s, size = 1 }: { s: TripSummary; size?: number }) {
 
 // 1080×1920: รูปเต็มจอ + ข้อมูลด้านล่าง
 function StoryCard({ s }: { s: TripSummary }) {
-  const photo = getPhoto(s.social.photo_id);
+  const photo = photoOf(s, s.social.photo_id);
   return (
     <div className="relative h-full w-full bg-brown text-cream">
       {photo && (

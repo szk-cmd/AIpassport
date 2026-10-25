@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import {
   CoverCard,
@@ -11,16 +12,11 @@ import {
   StatsCard,
 } from "@/components/cards/TripCards";
 import { TopBar } from "@/components/ui";
-import { getTripBySlug, MOCK_TRIPS } from "@/lib/mock";
-
-// สร้างหน้าของทริปตัวอย่างไว้ล่วงหน้าตอน build
-export function generateStaticParams() {
-  return MOCK_TRIPS.map((t) => ({ slug: t.slug }));
-}
+import { getSummaryBySlug } from "@/lib/trips-server";
 
 export async function generateMetadata({ params }: PageProps<"/t/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const trip = getTripBySlug(slug);
+  const trip = await getSummaryBySlug(slug);
   return { title: trip ? `${trip.summary.title} – PassportAI` : "ไม่พบทริป – PassportAI" };
 }
 
@@ -40,7 +36,8 @@ export default function TripPage({ params }: PageProps<"/t/[slug]">) {
 
 async function TripContent({ params }: { params: PageProps<"/t/[slug]">["params"] }) {
   const { slug } = await params;
-  const trip = getTripBySlug(slug); // MOCK: ของจริงจะดึงจากตาราง shares + trip_outputs
+  await connection(); // ผลสรุปอ่านจากฐานข้อมูลทุกครั้ง (ผู้ใช้แก้/สร้างทริปใหม่ได้ตลอด)
+  const trip = await getSummaryBySlug(slug); // shares → trip_outputs ของทริปนั้น (ทริปเดโมใช้ข้อมูล seed)
   if (!trip) notFound();
   const s = trip.summary;
 
@@ -48,7 +45,7 @@ async function TripContent({ params }: { params: PageProps<"/t/[slug]">["params"
   const sections = [
     { key: "cover", node: <CoverCard s={s} /> },
     { key: "stats", node: <StatsCard s={s} /> },
-    ...s.days.map((day, i) => ({ key: day.date, node: <DayCard day={day} index={i} /> })),
+    ...s.days.map((day, i) => ({ key: day.date, node: <DayCard s={s} day={day} index={i} /> })),
     { key: "map", node: <MapCard s={s} /> },
     { key: "expenses", node: <ExpensesCard s={s} /> },
     { key: "places", node: <PlacesCard s={s} /> },

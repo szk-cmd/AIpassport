@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button, Card, DateField, Input, TopBar } from "@/components/ui";
 import { packagePrice, PRICE_PER_DAY } from "@/lib/config";
 import { formatBaht } from "@/lib/format";
-import { dayCount, newId, todayKey, updateStore } from "@/lib/trip-store";
+import { createTrip, dayCount, newId, todayKey } from "@/lib/trip-store";
 
 // สร้างทริปที่กำลังจะเที่ยว แล้วไปเล่าเรื่องต่อในแชท
 // สร้างได้เลยแม้มีทริปอื่นค้างอยู่ (ทริปเดิมค้างแชทไว้ ยังไม่สรุปจนกว่าจะกดจบทริป)
@@ -14,46 +14,33 @@ export function StartForm() {
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState(todayKey());
   const [endDate, setEndDate] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
 
   const dateError = startDate && endDate && endDate < startDate;
   const canSubmit = title.trim() !== "" && startDate !== "" && endDate !== "" && !dateError;
   const days = startDate && endDate && !dateError ? dayCount(startDate, endDate) : null;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || saving) return;
     const id = newId();
-    const now = new Date().toISOString();
-    updateStore((d) => ({
-      trips: [
-        ...d.trips,
-        {
-          id,
-          title: title.trim(),
-          start_date: startDate,
-          end_date: endDate,
-          planned_days: dayCount(startDate, endDate),
-          status: "active",
-          ended_at: null,
-          paid_amount: null,
-          paid_at: null,
-          created_at: now,
-          slug: null,
-        },
-      ],
-      messages: {
-        ...d.messages,
-        [id]: [
-          {
-            id: newId(),
-            from: "bot",
-            text: `เริ่มทริป “${title.trim()}” แล้ว! ส่งรูป เล่าเรื่อง หรือถ่ายใบเสร็จมาได้ตลอดทริป เดี๋ยวผมจดให้ทั้งหมด`,
-            at: now,
-          },
-        ],
-      },
-    }));
-    router.push(`/trip/${id}/chat`);
+    setSaving(true);
+    setError(false);
+    try {
+      // บันทึกลงฐานข้อมูล (server เพิ่มข้อความต้อนรับในแชทให้) แล้วไปที่แชท
+      await createTrip({
+        id,
+        title: title.trim(),
+        start_date: startDate,
+        end_date: endDate,
+        planned_days: dayCount(startDate, endDate),
+      });
+      router.push(`/trip/${id}/chat`);
+    } catch {
+      setError(true);
+      setSaving(false);
+    }
   }
 
   return (
@@ -95,9 +82,10 @@ export function StartForm() {
             </Card>
           )}
 
-          <Button type="submit" block disabled={!canSubmit}>
+          <Button type="submit" block disabled={!canSubmit || saving}>
             เริ่มทริป
           </Button>
+          {error && <p className="text-center text-label text-danger">สร้างทริปไม่สำเร็จ ลองใหม่อีกครั้งนะ</p>}
         </form>
       </main>
     </div>

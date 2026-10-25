@@ -1,18 +1,21 @@
-import type { ChatMessage, StoredTrip } from "./trip-store";
+import { DEMO_IDS } from "./demo-ids";
+import type { ChatMessage } from "./trip-store";
+import type { Trip } from "./types";
 
 // ทริปเดโมที่ "กำลังเที่ยว" ของบัญชีทดสอบ วันที่คำนวณจากวันนี้เสมอ
 // - หัวหิน: อยู่วันที่ 2 จาก 3
 // - เขาใหญ่: เที่ยวจบไปตั้งแต่สัปดาห์ก่อนแต่ยังไม่กดจบทริป (ค้างแชทไว้ บอทจะถามว่าจะต่อทริปไหม)
-export const DEMO_ACTIVE_ID = "demo-huahin";
-export const DEMO_IDLE_ID = "demo-khaoyai";
+// seed ลงฐานข้อมูลด้วย lib/seed.ts (is_demo = true, ข้อความ is_seed = true)
+export const DEMO_ACTIVE_ID = DEMO_IDS.huahin;
+export const DEMO_IDLE_ID = DEMO_IDS.khaoyai;
 
-type DemoTrip = { trip: StoredTrip; messages: ChatMessage[] };
+type DemoTrip = { trip: Trip; messages: ChatMessage[] };
 
 export function mockActiveTrips(now = new Date()): DemoTrip[] {
   return [huahin(now), khaoYai(now)];
 }
 
-function helpers(now: Date, tripId: string) {
+function helpers(now: Date) {
   const day = (offset: number, hour: number, minute = 0) => {
     const d = new Date(now);
     d.setDate(d.getDate() + offset);
@@ -24,13 +27,12 @@ function helpers(now: Date, tripId: string) {
   // ข้อความวันนี้ต้องไม่อยู่ในอนาคต ถ้ายังเช้าอยู่ให้เป็นเวลาตอนนี้แทน
   const today = (hour: number, minute = 0) => new Date(Math.min(day(0, hour, minute).getTime(), now.getTime()));
 
-  let n = 0;
   const msg = (
     from: ChatMessage["from"],
     at: Date,
     body: Pick<ChatMessage, "text" | "photos" | "extracted">,
   ): ChatMessage => ({
-    id: `${tripId}-m${++n}`,
+    id: crypto.randomUUID(),
     from,
     at: at.toISOString(),
     ...body,
@@ -39,7 +41,7 @@ function helpers(now: Date, tripId: string) {
 }
 
 function huahin(now: Date): DemoTrip {
-  const { day, key, today, msg } = helpers(now, DEMO_ACTIVE_ID);
+  const { day, key, today, msg } = helpers(now);
   return {
     trip: {
       id: DEMO_ACTIVE_ID,
@@ -52,7 +54,6 @@ function huahin(now: Date): DemoTrip {
       paid_amount: null,
       paid_at: null,
       created_at: day(-1, 8).toISOString(),
-      slug: null,
     },
     messages: [
       msg("bot", day(-1, 8), {
@@ -78,7 +79,7 @@ function huahin(now: Date): DemoTrip {
 }
 
 function khaoYai(now: Date): DemoTrip {
-  const { day, key, msg } = helpers(now, DEMO_IDLE_ID);
+  const { day, key, msg } = helpers(now);
   return {
     trip: {
       id: DEMO_IDLE_ID,
@@ -91,7 +92,6 @@ function khaoYai(now: Date): DemoTrip {
       paid_amount: null,
       paid_at: null,
       created_at: day(-9, 7).toISOString(),
-      slug: null,
     },
     messages: [
       msg("bot", day(-9, 7), {

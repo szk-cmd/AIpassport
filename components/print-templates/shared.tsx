@@ -1,6 +1,6 @@
 import { QrCode } from "@/components/QrCode";
 import { RouteMapImage } from "@/components/RouteMap";
-import { getPhoto } from "@/lib/mock";
+import { photoOf } from "@/lib/summary";
 import type { TripSummary } from "@/lib/types";
 
 // ข้อมูลบนกรอบที่ผู้ใช้เปิด/ปิดได้ (แต่ละ template ประกาศว่ารองรับอะไรบ้างใน index.ts)
@@ -28,17 +28,18 @@ export type TemplateProps = {
   hidden: InfoKey[]; // ข้อมูลที่ผู้ใช้ปิดไว้
 };
 
-export const MAX_TEXT_LENGTH = 100;
+export { MAX_TEXT_LENGTH } from "@/lib/config";
 
-type PhotoItem = NonNullable<ReturnType<typeof getPhoto>>;
+type PhotoItem = NonNullable<ReturnType<typeof photoOf>>;
 
 // รูปทั้งหมดที่ AI คัดไว้ของทริปนี้ เรียงจากรูปกรอบรูป → รูปเด่น → รูปรายวัน ไม่ซ้ำกัน
 export function aiPhotoIds(s: TripSummary) {
   return [...new Set([...s.print.photo_ids, ...s.highlight_photo_ids, ...s.days.flatMap((d) => d.photo_ids)])];
 }
 
-export function photosOf(ids: string[]): PhotoItem[] {
-  return ids.map(getPhoto).filter((p): p is PhotoItem => p !== undefined);
+// รูปตาม id ที่ผู้ใช้เลือก (ทริปจริงใช้รูปใน summary.photos เท่านั้น)
+export function photosOf(s: TripSummary, ids: string[]): PhotoItem[] {
+  return ids.map((id) => photoOf(s, id)).filter((p): p is PhotoItem => p !== undefined);
 }
 
 // แผ่น A4 แนวตั้ง: ขนาดทุกอย่างข้างในใช้หน่วย cqw (% ของความกว้างแผ่น) จึงย่อ/ขยายได้ทั้งแผ่น

@@ -13,13 +13,17 @@ export function isTripFileUrl(url: string) {
   return url.startsWith(`${base.replace(/\/$/, "")}/storage/v1/object/public/${BUCKET}/`);
 }
 
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
 // คืน null ถ้าโหลดไม่ได้ ไม่ใช่รูป หรือใหญ่เกิน (ให้แชทตอบต่อได้โดยไม่มีรูป)
-export async function fetchTripImage(url: string): Promise<AiAttachment | null> {
+// allowPdf: Agent 03 อ่านใบเสร็จ/ตั๋วที่เป็น PDF ได้ด้วย
+export async function fetchTripImage(url: string, options: { allowPdf?: boolean } = {}): Promise<AiAttachment | null> {
   if (!isTripFileUrl(url)) return null;
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    const type = res.headers.get("content-type")?.split(";")[0];
-    if (!res.ok || (type !== "image/jpeg" && type !== "image/png" && type !== "image/webp")) return null;
+    const type = res.headers.get("content-type")?.split(";")[0] as AiAttachment["mimeType"] | undefined;
+    const allowed = options.allowPdf ? [...IMAGE_TYPES, "application/pdf"] : IMAGE_TYPES;
+    if (!res.ok || !type || !allowed.includes(type)) return null;
     const bytes = Buffer.from(await res.arrayBuffer());
     if (bytes.length > MAX_IMAGE_BYTES) return null;
     return { mimeType: type, data: bytes.toString("base64") };

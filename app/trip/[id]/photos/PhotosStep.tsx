@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { PhotoDrop } from "@/components/PhotoDrop";
 import type { PreparedFile } from "@/lib/photo-prep";
-import { useStore } from "@/lib/trip-store";
+import { addItems, useStore } from "@/lib/trip-store";
 import { uploadTripFile } from "@/lib/upload";
 
 // หลังกดจบทริป: เพิ่มรูปที่ยังไม่ได้ส่งในแชท (เช่นรูปจากกล้อง/คอม) ข้ามได้
@@ -13,17 +13,26 @@ export function PhotosStep() {
   const { id } = useParams<{ id: string }>();
   const data = useStore();
   const [files, setFiles] = useState<PreparedFile[]>([]);
-  // ลิงก์ไฟล์บน Supabase Storage ตาม id ไฟล์ (null = อัปโหลดไม่สำเร็จ)
-  // TODO สัปดาห์ 2: บันทึกลิงก์ + takenAt/lat/lng ลง trip_items
+  // ลิงก์ไฟล์บน Supabase Storage ตาม id ไฟล์ (null = อัปโหลดหรือบันทึกไม่สำเร็จ)
   const [uploaded, setUploaded] = useState<Record<string, string | null>>({});
   const trip = data?.trips.find((t) => t.id === id);
   if (!data) return null;
 
   // อัปโหลดตรงจากเบราว์เซอร์เข้า Storage ทันทีที่เตรียมรูปเสร็จ (ไม่ผ่าน API ของเรา)
+  // แล้วบันทึกลิงก์ + EXIF + รูปย่อลง trip_items ให้ agent ใช้ตอนสรุปทริป
   function handleAdd(added: PreparedFile[]) {
     setFiles((prev) => [...prev, ...added]);
     for (const f of added) {
-      uploadTripFile(id, f.blob).then((url) => setUploaded((u) => ({ ...u, [f.id]: url })));
+      uploadTripFile(id, f.blob)
+        .then(async (url) => {
+          if (!url) return null;
+          await addItems(id, [
+            { kind: f.kind, file_url: url, caption: f.name, thumb: f.thumb, takenAt: f.takenAt, lat: f.lat, lng: f.lng },
+          ]);
+          return url;
+        })
+        .catch(() => null)
+        .then((url) => setUploaded((u) => ({ ...u, [f.id]: url })));
     }
   }
 

@@ -17,7 +17,7 @@ import {
   type PrintOptions,
   type TemplateId,
 } from "@/components/print-templates";
-import { getPhoto } from "@/lib/mock";
+import { photoOf } from "@/lib/summary";
 import type { TripSummary } from "@/lib/types";
 
 // ราคายังไม่ได้ตั้ง ใส่ [฿__] ไว้ก่อน
@@ -144,7 +144,7 @@ export function OrderForm({ s, slug }: Props) {
             </p>
             <div className="mt-4 grid grid-cols-4 gap-2">
               {aiPhotoIds(s).map((id) => {
-                const photo = getPhoto(id);
+                const photo = photoOf(s, id);
                 if (!photo) return null;
                 const order = options.photoIds.indexOf(id);
                 const on = order !== -1;

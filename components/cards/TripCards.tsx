@@ -17,7 +17,7 @@ import { QrCode } from "@/components/QrCode";
 import { RouteLine, RouteMap } from "@/components/RouteMap";
 import { ButtonLink, Card, Chip, ICON, StatRow, StatTile } from "@/components/ui";
 import { CATEGORY_LABELS, formatBaht, formatDate, formatDateRange } from "@/lib/format";
-import { getPhoto } from "@/lib/mock";
+import { photoOf } from "@/lib/summary";
 import type { DayStory, ExpenseCategory, TripSummary } from "@/lib/types";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { seeded, Stamp } from "./Stamp";
@@ -36,7 +36,7 @@ function CardHeading({ title, meta }: { title: React.ReactNode; meta?: React.Rea
 
 // ---------- 1) ปก (การ์ดปกทริป ใช้น้ำตาลแบรนด์) ----------
 export function CoverCard({ s }: { s: TripSummary }) {
-  const cover = getPhoto(s.cover_photo_id);
+  const cover = photoOf(s, s.cover_photo_id);
   return (
     <div className="relative aspect-[4/5] overflow-hidden rounded-card bg-brown text-white shadow-soft">
       {cover && (
@@ -88,9 +88,12 @@ export function StatsCard({ s }: { s: TripSummary }) {
 }
 
 // ---------- 3) รายวัน ----------
-export function DayCard({ day, index }: { day: DayStory; index: number }) {
+export function DayCard({ s, day, index }: { s: TripSummary; day: DayStory; index: number }) {
   const place = day.places[0] ?? "";
-  const photos = day.photo_ids.slice(0, 2).map(getPhoto).filter((p) => p !== undefined);
+  const photos = day.photo_ids
+    .slice(0, 2)
+    .map((id) => photoOf(s, id))
+    .filter((p) => p !== undefined);
 
   return (
     <Card>

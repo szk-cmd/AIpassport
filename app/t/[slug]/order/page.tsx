@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { TopBar } from "@/components/ui";
-import { getTripBySlug, MOCK_TRIPS } from "@/lib/mock";
+import { getSummaryBySlug } from "@/lib/trips-server";
 import { OrderForm } from "./OrderForm";
 
-export function generateStaticParams() {
-  return MOCK_TRIPS.map((t) => ({ slug: t.slug }));
-}
-
 export async function generateMetadata({ params }: PageProps<"/t/[slug]/order">): Promise<Metadata> {
-  const trip = getTripBySlug((await params).slug);
+  const trip = await getSummaryBySlug((await params).slug);
   return { title: `สั่งพิมพ์กรอบรูป ${trip?.summary.title ?? ""} – PassportAI` };
 }
 
@@ -25,7 +22,8 @@ export default function OrderPage({ params }: PageProps<"/t/[slug]/order">) {
 
 async function OrderContent({ params }: { params: PageProps<"/t/[slug]/order">["params"] }) {
   const { slug } = await params;
-  const trip = getTripBySlug(slug); // MOCK: ของจริงจะดึงจาก DB
+  await connection();
+  const trip = await getSummaryBySlug(slug); // trip_outputs ของทริปนั้น (ทริปเดโมใช้ข้อมูล seed)
   if (!trip) notFound();
 
   return (
