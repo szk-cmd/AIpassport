@@ -2,14 +2,14 @@
 // AI_PROVIDER = mock | gemini | anthropic  ถ้าไม่มี key ของ provider ที่เลือก จะใช้ข้อมูลปลอม (mock) แทน
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import { ApiError, GoogleGenAI, type Content, type Part } from "@google/genai";
+import { ApiError, GoogleGenAI, MediaResolution, type Content, type Part } from "@google/genai";
 import { botReply } from "./chat-bot";
 import { CATEGORY_LABELS } from "./format";
 import type { ExpenseCategory, Extracted } from "./types";
 
 export type AiProvider = "mock" | "gemini" | "anthropic";
 
-// รูปที่แนบต้องย่อมาแล้วจากเบราว์เซอร์ (ด้านยาว ≤ AI_IMAGE_MAX_SIDE ใน lib/config.ts) เพื่อประหยัดโควตา
+// รูปที่แนบ (ดึงจาก Supabase Storage ฝั่ง server ดู lib/storage-server.ts) Gemini ใช้ความละเอียดกลางเพื่อประหยัดโควตา
 export type AiAttachment = { mimeType: "image/jpeg" | "image/png" | "image/webp"; data: string }; // base64 ไม่มี "data:..." นำหน้า
 export type AiMessage = { role: "user" | "assistant"; text: string };
 
@@ -192,6 +192,8 @@ async function geminiGenerateOnce(model: string, contents: Content[], system?: s
     contents,
     config: {
       systemInstruction: system,
+      // รูปละ ~256 token ไม่ว่ารูปจะใหญ่แค่ไหน (รูปที่อัปโหลดกว้างได้ถึง 1600px)
+      mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
       ...(jsonSchema && { responseMimeType: "application/json", responseJsonSchema: jsonSchema }),
     },
   });

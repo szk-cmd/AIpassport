@@ -7,7 +7,8 @@ import { LogoMark } from "@/components/Logo";
 import { Button, ButtonLink, cx, EmptyState, ICON, IconButton, TopBar } from "@/components/ui";
 import { PRICE_PER_DAY } from "@/lib/config";
 import { formatBaht, formatDate } from "@/lib/format";
-import { imageForAi, makeThumb } from "@/lib/photo-prep";
+import { prepareChatPhoto } from "@/lib/photo-prep";
+import { uploadTripFile } from "@/lib/upload";
 import {
   addMessages,
   dayCount,
@@ -26,8 +27,6 @@ const PLACEHOLDER_COLORS = ["#E8A93C", "#1E6B63", "#E0642C", "#5B7DA8", "#B5838D
 const MAX_PHOTOS_PER_SEND = 10; // รูปย่อเก็บใน localStorage จึงจำกัดต่อครั้งไว้
 const MAX_PHOTOS_TO_AI = 4; // ส่งให้ AI ดูแค่ 4 รูปแรกต่อครั้ง ประหยัดโควตา
 const NETWORK_ERROR = "ส่งไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่อีกครั้งนะ";
-
-type AiImage = { mimeType: "image/jpeg"; data: string };
 
 // แชทระหว่างเที่ยว: ส่งข้อความ/รูป บอทตอบแบบ MOCK, ☰ เปิดลิ้นชักรายการทริป
 export function ChatView() {
@@ -66,7 +65,7 @@ export function ChatView() {
   }
 
   // ส่งข้อความให้ Agent 01 (ฝั่ง server ผ่าน /api/trip-chat) แล้วรอคำตอบ
-  async function send(message: Pick<ChatMessage, "text" | "photos">, images: AiImage[] = []) {
+  async function send(message: Pick<ChatMessage, "text" | "photos">, imageUrls: string[] = []) {
     const t = trip!;
     const userMessage: ChatMessage = { id: newId(), from: "user", at: new Date().toISOString(), ...message };
     // ประวัติแชทแบบข้อความล้วน (รูปเก่าไม่ส่งซ้ำ ประหยัดโควตา)
@@ -86,7 +85,8 @@ export function ChatView() {
           trip: { title: t.title, startDate: t.start_date, endDate: t.end_date },
           today: todayKey(),
           history,
-          message: { text: message.text ?? "", attachments: images },
+          // ส่งแค่ลิงก์รูปบน Storage ไม่ส่งไฟล์รูปผ่าน API ของเรา
+          message: { text: message.text ?? "", imageUrls },
         }),
       });
       if (res.ok) {
@@ -133,21 +133,25 @@ export function ChatView() {
     const files = Array.from(list ?? []).slice(0, MAX_PHOTOS_PER_SEND);
     if (files.length === 0) return;
     setBusy(true);
-    // รูปย่อเล็กเก็บในแชท + รูป 1024px ส่งให้ AI ดู (ทำพร้อมกัน)
-    const [photos, images] = await Promise.all([
-      Promise.all(
-        files.map(
-          async (f, i): Promise<ChatPhoto> => ({
-            thumb: await makeThumb(f),
-            color: PLACEHOLDER_COLORS[i % PLACEHOLDER_COLORS.length],
-            caption: f.name,
-          }),
-        ),
-      ),
-      Promise.all(files.slice(0, MAX_PHOTOS_TO_AI).map(imageForAi)),
-    ]);
+    // อ่าน EXIF → แปลง HEIC → ย่อ 1600px → อัปโหลดตรงเข้า Supabase Storage (ทำทีละรูปพร้อมกัน)
+    const photos = await Promise.all(
+      files.map(async (f, i): Promise<ChatPhoto> => {
+        const prepared = await prepareChatPhoto(f);
+        const url = prepared.upload ? await uploadTripFile(id, prepared.upload) : null;
+        return {
+          thumb: prepared.thumb,
+          color: PLACEHOLDER_COLORS[i % PLACEHOLDER_COLORS.length],
+          caption: f.name,
+          url,
+          takenAt: prepared.takenAt,
+          lat: prepared.lat,
+          lng: prepared.lng,
+        };
+      }),
+    );
     setBusy(false);
-    send({ photos }, images.filter((x) => x !== null));
+    const imageUrls = photos.flatMap((p) => (p.url ? [p.url] : [])).slice(0, MAX_PHOTOS_TO_AI);
+    send({ photos }, imageUrls);
   }
 
   return (

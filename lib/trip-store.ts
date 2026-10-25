@@ -6,7 +6,15 @@ import { MOCK_TRIPS } from "./mock";
 import { mockActiveTrips } from "./mock-active";
 import type { Extracted, Trip } from "./types";
 
-export type ChatPhoto = { thumb: string | null; color: string; caption: string };
+export type ChatPhoto = {
+  thumb: string | null; // รูปย่อเล็ก data URL (แสดงในแชท)
+  color: string; // สีกล่องแทนรูป ถ้าไม่มีรูปย่อ
+  caption: string;
+  url?: string | null; // รูป 1600px บน Supabase Storage (null = อัปโหลดไม่สำเร็จ)
+  takenAt?: string | null; // จาก EXIF อ่านก่อนย่อรูป
+  lat?: number | null;
+  lng?: number | null;
+};
 
 export type ChatMessage = {
   id: string;

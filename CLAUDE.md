@@ -11,6 +11,14 @@
 - ไม่ทำ: ระบบสมาชิกจริง/สมัครสมาชิก, ระบบจ่ายเงินจริง, RLS, Supabase Realtime (ใช้ polling ทุก 2 วิ), LINE
 - login มีแค่บัญชีทดสอบ test / 1234 (lib/trip-store.ts) ระหว่าง MOCK ทริป แชท และ session เก็บใน localStorage
 
+## Deploy (Vercel) และไฟล์
+- รูป/ไฟล์อัปโหลดตรงจากเบราว์เซอร์เข้า Supabase Storage bucket trip-files (lib/upload.ts) ห้ามส่งไฟล์ผ่าน API route (Vercel ~4.5MB/request)
+- เตรียมรูปในเบราว์เซอร์ (lib/photo-prep.ts): อ่าน EXIF ก่อนเสมอ → HEIC อ่านไม่ได้ใช้ heic-to แปลง → ย่อด้านยาว ≤ 1600px JPEG 0.8
+- แชทเก็บรูปย่อ 320px ในเครื่อง + url บน Storage + takenAt/lat/lng ใน ChatPhoto
+- route ที่เรียก AI: export const maxDuration = 60 (Hobby สูงสุด 300) แต่ละ agent เป็น request แยก ห้ามรันทั้ง pipeline ใน request เดียว
+- ค่าลับอ่านเฉพาะในไฟล์ที่ import "server-only", browser ใช้ได้เฉพาะ NEXT_PUBLIC_* รายการ env ทั้งหมดอยู่ใน README และ .env.local.example
+- login ทดสอบเก็บใน localStorage (ไม่มี cookie)
+
 ## หมายเหตุการพัฒนา
 - dev server ไม่รับการแก้ app/globals.css (Tailwind turbopack cache) → หยุด dev, ลบโฟลเดอร์ .next, รัน npm run dev ใหม่
   เลยใส่ style เฉพาะหน้าไว้ในคอมโพเนนต์ (Tailwind class / inline style) แทนการเพิ่มใน globals.css
@@ -108,12 +116,13 @@ AI_PROVIDER = mock | gemini | anthropic
   system = บทบาทของ agent ที่เรียก (บทบาทอยู่ในไฟล์ agent ใน lib/agents/ ไม่ใช่ใน lib/ai.ts)
 - extract({ text, attachments }, { context }) → { places, expenses[{label, amount, category}] } สำหรับบันทึกลง trip_items
 - generateText(prompt, { system }) สำหรับ Agent 02-04
-รูปที่ส่งให้ AI ย่อในเบราว์เซอร์ก่อน ด้านยาว ≤ 1024px (imageForAi ใน lib/photo-prep.ts, AI_IMAGE_MAX_SIDE)
+รูปที่ส่งให้ AI: เบราว์เซอร์อัปโหลดเข้า Storage แล้วส่งแค่ลิงก์ ฝั่ง server ดึงรูป (lib/storage-server.ts รับเฉพาะลิงก์ใน bucket trip-files)
+  Gemini ตั้ง mediaResolution MEDIUM (~256 token ต่อรูป ไม่ว่ารูปใหญ่แค่ไหน)
 429/503 → รอแล้วลองใหม่ 1 ครั้ง (retry ของ SDK) ยังไม่ได้ → "ตอนนี้มีคนใช้เยอะ ลองใหม่อีกสักครู่นะ" ไม่โชว์ error ดิบ
 extract/generateText โยน AiError (มี userMessage ภาษาคน) ให้ orchestrator ตัดสินใจ retry
 เช็กการเชื่อมต่อ: GET /api/ai-test (ส่ง "สวัสดี" แล้วแสดงคำตอบ + provider + model)
 แชทในหน้าเว็บ → POST /api/trip-chat (ตรวจ input) → Agent 01 (lib/agents/memory-collection.ts)
-  ส่งประวัติแชทแบบข้อความ 20 ข้อความล่าสุด + รูป 1024px สูงสุด 4 รูปของข้อความนี้ (รูปเก่าไม่ส่งซ้ำ)
+  ส่งประวัติแชทแบบข้อความ 20 ข้อความล่าสุด + ลิงก์รูปของข้อความนี้สูงสุด 4 รูป (รูปเก่าไม่ส่งซ้ำ)
   ตอบแชท + extract พร้อมกัน ผล extract เก็บไว้ที่ข้อความ (ChatMessage.extracted) แสดง "จดไว้: 📍 … · 💰 …" ใต้ข้อความ
   lib/chat-bot.ts = คำตอบปลอมตอน AI_PROVIDER=mock
 

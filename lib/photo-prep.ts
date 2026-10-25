@@ -1,8 +1,10 @@
-// เตรียมรูปในเบราว์เซอร์ก่อนอัปโหลด: อ่าน EXIF → ย่อรูป → จับกลุ่มเป็นทริปตามวันที่
+// เตรียมรูปในเบราว์เซอร์ก่อนอัปโหลด: อ่าน EXIF → แปลง HEIC → ย่อรูป → จับกลุ่มเป็นทริปตามวันที่
 // ใช้ฝั่ง client เท่านั้น (ต้องมี canvas / createImageBitmap)
-import { AI_IMAGE_MAX_SIDE, MAX_FILE_MB } from "./config";
+// ไฟล์รูปอัปโหลดตรงจากเบราว์เซอร์เข้า Supabase Storage (lib/upload.ts) ไม่ผ่าน API route ของเรา
+import { MAX_FILE_MB } from "./config";
 
-const MAX_SIDE = 1200; // ด้านยาวหลังย่อ (px)
+const MAX_SIDE = 1600; // ด้านยาวหลังย่อ (px) ก่อนอัปโหลด
+const THUMB_SIDE = 320; // รูปย่อเล็กเก็บในแชท (localStorage)
 const JPEG_QUALITY = 0.8;
 const MAX_GAP_DAYS = 1; // วันที่ถ่ายห่างกันเกินนี้ = คนละทริป
 const MAX_BYTES = MAX_FILE_MB * 1024 * 1024;
@@ -20,68 +22,61 @@ export type PreparedFile = {
 
 export type TripGroup = { start: string; end: string; files: PreparedFile[] };
 
+type Exif = Pick<PreparedFile, "takenAt" | "lat" | "lng">;
+
 export function fileId(file: File) {
   return `${file.name}:${file.size}`;
 }
 
 // รูป HEIC บน Windows มักไม่มี type เลยดูจากนามสกุลด้วย
-export function isSupported(file: File) {
-  return file.type.startsWith("image/") || file.type === "application/pdf" || /\.(heic|heif)$/i.test(file.name);
+function isHeicFile(file: File) {
+  return /^image\/hei[cf]/.test(file.type) || /\.(heic|heif)$/i.test(file.name);
 }
 
-// คืน null ถ้าไฟล์ใช้ไม่ได้ (PDF ใหญ่เกิน หรือรูปที่ย่อไม่ได้และใหญ่เกิน)
-export async function prepareFile(file: File): Promise<PreparedFile | null> {
-  const base = { id: fileId(file), name: file.name };
+export function isSupported(file: File) {
+  return file.type.startsWith("image/") || file.type === "application/pdf" || isHeicFile(file);
+}
 
-  if (file.type === "application/pdf") {
-    if (file.size > MAX_BYTES) return null;
-    return { ...base, kind: "pdf", blob: file, previewUrl: null, takenAt: null, lat: null, lng: null };
-  }
-
-  // อ่าน EXIF ก่อนย่อ เพราะ canvas จะทิ้ง EXIF ไป
+// อ่าน EXIF จากไฟล์ต้นฉบับ ต้องทำก่อนย่อ เพราะ canvas จะทิ้ง EXIF ไป (exifr อ่าน HEIC ได้ด้วย)
+export async function readExif(file: File): Promise<Exif> {
   // import ตอนใช้ เพราะ exifr พยายามโหลด fs/zlib ถ้าถูกเรียกตอน render ฝั่ง server
   const { default: exifr } = await import("exifr");
   const exif = await exifr.parse(file, { gps: true, xmp: false, icc: false, iptc: false }).catch(() => null);
   const taken: unknown = exif?.DateTimeOriginal ?? exif?.CreateDate;
-  const lat = typeof exif?.latitude === "number" ? exif.latitude : null;
-  const lng = typeof exif?.longitude === "number" ? exif.longitude : null;
-
-  const resized = await resizeImage(file);
-  if (!resized && file.size > MAX_BYTES) return null;
-  const blob = resized ?? file;
-
   return {
-    ...base,
-    kind: "image",
-    blob,
-    // ถ้าย่อไม่ได้ (เช่น HEIC บน Chrome) เบราว์เซอร์ก็แสดงรูปตัวอย่างไม่ได้เหมือนกัน
-    previewUrl: resized ? URL.createObjectURL(resized) : null,
     takenAt: taken instanceof Date && !isNaN(taken.getTime()) ? localDateKey(taken) : null,
-    lat,
-    lng,
+    lat: typeof exif?.latitude === "number" ? exif.latitude : null,
+    lng: typeof exif?.longitude === "number" ? exif.longitude : null,
   };
 }
 
-// ย่อให้ด้านยาวไม่เกิน maxSide เป็น JPEG, คืน null ถ้าเบราว์เซอร์อ่านรูปนี้ไม่ได้
-async function resizeImage(file: File, maxSide = MAX_SIDE, quality = JPEG_QUALITY): Promise<Blob | null> {
+// อ่านรูปเป็น bitmap: เบราว์เซอร์อ่านเองก่อน (Safari อ่าน HEIC ได้)
+// ถ้าเป็น HEIC ที่อ่านไม่ได้ (Chrome/Android/Windows) ค่อยโหลดตัวแปลง heic-to มาใช้
+async function decodeImage(file: File): Promise<ImageBitmap | null> {
   try {
-    const bitmap = await createImageBitmap(file); // หมุนรูปตาม EXIF ให้เอง
-    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    bitmap.close();
-    return await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    return await createImageBitmap(file); // หมุนรูปตาม EXIF ให้เอง
   } catch {
-    return null;
+    if (!isHeicFile(file)) return null;
+    try {
+      const { heicTo } = await import("heic-to/next");
+      return await heicTo({ blob: file, type: "bitmap" });
+    } catch {
+      return null;
+    }
   }
 }
 
-// รูปย่อเล็กเป็น data URL เก็บใน localStorage ได้ (ใช้ในแชทระหว่างยังเป็น MOCK)
-export async function makeThumb(file: File, side = 320): Promise<string | null> {
-  const blob = await resizeImage(file, side, 0.7);
-  if (!blob) return null;
+// ย่อให้ด้านยาวไม่เกิน maxSide เป็น JPEG
+async function toJpeg(bitmap: ImageBitmap, maxSide: number, quality = JPEG_QUALITY): Promise<Blob | null> {
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+}
+
+function toDataUrl(blob: Blob): Promise<string | null> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
@@ -90,14 +85,38 @@ export async function makeThumb(file: File, side = 320): Promise<string | null> 
   });
 }
 
-// รูปย่อสำหรับส่งให้ AI (lib/ai.ts) เป็น base64 ไม่มี "data:..." นำหน้า
-export async function imageForAi(file: File): Promise<{ mimeType: "image/jpeg"; data: string } | null> {
-  const blob = await resizeImage(file, AI_IMAGE_MAX_SIDE, 0.8);
-  if (!blob) return null;
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return { mimeType: "image/jpeg", data: btoa(binary) };
+// คืน null ถ้าไฟล์ใช้ไม่ได้ (PDF ใหญ่เกิน หรือรูปที่อ่าน/ย่อไม่ได้และใหญ่เกิน)
+export async function prepareFile(file: File): Promise<PreparedFile | null> {
+  const base = { id: fileId(file), name: file.name };
+
+  if (file.type === "application/pdf") {
+    if (file.size > MAX_BYTES) return null;
+    return { ...base, kind: "pdf", blob: file, previewUrl: null, takenAt: null, lat: null, lng: null };
+  }
+
+  const exif = await readExif(file); // ก่อนย่อเสมอ
+  const bitmap = await decodeImage(file);
+  const resized = bitmap ? await toJpeg(bitmap, MAX_SIDE) : null;
+  bitmap?.close();
+  if (!resized && file.size > MAX_BYTES) return null;
+
+  return {
+    ...base,
+    kind: "image",
+    blob: resized ?? file,
+    previewUrl: resized ? URL.createObjectURL(resized) : null,
+    ...exif,
+  };
+}
+
+// รูปที่ส่งในแชท: EXIF + รูปย่อเล็ก (เก็บในเครื่อง) + รูป 1600px (อัปโหลดขึ้น Storage) อ่านไฟล์ครั้งเดียว
+export async function prepareChatPhoto(file: File) {
+  const exif = await readExif(file);
+  const bitmap = await decodeImage(file);
+  if (!bitmap) return { ...exif, thumb: null, upload: null };
+  const [thumbBlob, upload] = await Promise.all([toJpeg(bitmap, THUMB_SIDE, 0.7), toJpeg(bitmap, MAX_SIDE)]);
+  bitmap.close();
+  return { ...exif, thumb: thumbBlob ? await toDataUrl(thumbBlob) : null, upload };
 }
 
 // exifr คืนเวลาถ่ายเป็นเวลาท้องถิ่นของกล้อง จึงใช้ getDate() ไม่ใช่ UTC

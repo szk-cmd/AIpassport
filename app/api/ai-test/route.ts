@@ -1,6 +1,8 @@
 import { connection } from "next/server";
 import { aiInfo, chat } from "@/lib/ai";
 
+export const maxDuration = 60; // AI อาจตอบช้าตอนคนใช้เยอะ (Vercel Hobby สูงสุด 300 วิ)
+
 // GET /api/ai-test : ส่ง "สวัสดี" ให้ AI แล้วแสดงคำตอบ เช็กว่าต่อ AI ได้
 export async function GET() {
   await connection(); // เรียกใหม่ทุกครั้ง ไม่ใช้ผลที่ build ไว้ล่วงหน้า
