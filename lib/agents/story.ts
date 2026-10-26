@@ -40,15 +40,20 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
+const EMPTY_DAY = "ไม่มีบันทึกในวันนี้";
+
 export async function runStory(trip: { title: string }, collected: CollectOutput): Promise<StoryOutput> {
   const captions = new Map(collected.photos.map((p) => [p.id, p.caption]));
-  const lines = collected.days.map((d, i) => {
+  // ส่งให้ AI เฉพาะวันที่มีข้อมูล วันว่างไม่ต้องให้ AI เขียน (กันการแต่งเรื่อง)
+  const hasContent = (d: CollectOutput["days"][number]) => d.texts.length + d.places.length + d.photoIds.length > 0;
+  const lines = collected.days.flatMap((d, i) => {
+    if (!hasContent(d)) return [];
     const parts = [`วันที่ ${i + 1} (date: ${d.date})`];
     if (d.texts.length) parts.push(`- ผู้ใช้เล่า: ${d.texts.map((t) => `"${t}"`).join(" / ")}`);
     if (d.places.length) parts.push(`- สถานที่ที่ผู้ใช้พูดถึง: ${d.places.join(", ")}`);
     const pics = d.photoIds.map((id) => captions.get(id)).filter(Boolean);
     if (pics.length) parts.push(`- รูปของวันนี้: ${pics.join("; ")}`);
-    return parts.join("\n");
+    return [parts.join("\n")];
   });
 
   const result = (await generateJson(
@@ -60,11 +65,11 @@ export async function runStory(trip: { title: string }, collected: CollectOutput
   const byDate = new Map((result.days ?? []).map((d) => [d.date, d]));
   return {
     days: collected.days.map((d, i) => {
-      const r = byDate.get(d.date);
+      const r = hasContent(d) ? byDate.get(d.date) : undefined;
       return {
         date: d.date,
         title: r?.title?.trim() || `วันที่ ${i + 1}`,
-        story: r?.story?.trim() || d.texts.join(" "),
+        story: r?.story?.trim() || d.texts.join(" ") || EMPTY_DAY,
       };
     }),
     headline: result.headline?.trim().slice(0, 40) || trip.title,

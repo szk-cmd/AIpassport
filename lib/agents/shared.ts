@@ -18,14 +18,14 @@ export type CollectedPhoto = {
   id: string;
   file_url: string | null;
   color: string | null; // รูปตัวอย่างของทริปเดโม (ไม่มีไฟล์จริง)
-  date: string; // วันที่ในทริป (จาก EXIF ถ้ามี ไม่งั้นวันที่อัปโหลด)
+  date: string; // วันที่ในทริป (โค้ดแบ่งวัน: EXIF ในช่วงทริป → เรียงรูปเก่าเป็นวันที่ 1,2,.. → วันที่ส่ง)
   order: number; // ลำดับที่ผู้ใช้ส่ง ใช้เรียงในวันเดียวกัน
   lat: number | null;
   lng: number | null;
   caption: string;
   kind: PhotoKind;
   keep: boolean;
-  score: number; // 1-5 ความเด่นของรูป
+  score: number; // 1-10 ความเป็นไฮไลต์ของรูป (Agent 01 ให้คะแนน)
 };
 
 // ผลของ Agent 01 (เก็บใน agent_runs.output ส่งต่อให้ 02 / 03 / 04)
@@ -34,7 +34,7 @@ export type CollectOutput = {
   endDate: string; // วันจบจริง (กดจบก่อนกำหนด = วันที่กดจบ)
   days: { date: string; texts: string[]; places: string[]; photoIds: string[] }[];
   photos: CollectedPhoto[];
-  selected: string[]; // รูปเด่นเรียงจากเด่นที่สุด ไม่เกิน MAX_AI_PHOTOS_PER_TRIP
+  selected: string[]; // รูปไฮไลต์เรียงจากเด่นที่สุด (ตัวแรก = ปก) วันละไม่เกิน ~6 รูป รวมไม่เกิน 30
   documents: { id: string; file_url: string; kind: "image" | "pdf"; date: string }[]; // ใบเสร็จ/ตั๋วให้ Agent 03 อ่าน
   expenses: ExpenseLine[]; // จากที่ผู้ใช้พิมพ์/ส่งในแชท (Agent 01 ดึงไว้ตอนคุย)
   places: string[];

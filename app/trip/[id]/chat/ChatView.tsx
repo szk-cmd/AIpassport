@@ -1,13 +1,13 @@
 "use client";
 
-import { ArrowUp, Camera, LoaderCircle, MapPin, Menu, MessageCircleOff, Wallet } from "lucide-react";
+import { ArrowUp, CircleAlert, ImagePlus, LoaderCircle, MapPin, Menu, MessageCircleOff, Wallet, X } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { memo, useEffect, useRef, useState } from "react";
 import { LogoMark } from "@/components/Logo";
 import { Button, ButtonLink, cx, EmptyState, ICON, IconButton, TopBar } from "@/components/ui";
 import { PRICE_PER_DAY } from "@/lib/config";
 import { formatBaht, formatDate } from "@/lib/format";
-import { prepareChatPhoto } from "@/lib/photo-prep";
+import { isSupported, prepareChatPhoto } from "@/lib/photo-prep";
 import { uploadTripFile } from "@/lib/upload";
 import {
   addMessages,
@@ -24,7 +24,7 @@ import {
 import { TripDrawer } from "./TripDrawer";
 
 const PLACEHOLDER_COLORS = ["#E8A93C", "#1E6B63", "#E0642C", "#5B7DA8", "#B5838D"];
-const MAX_PHOTOS_PER_SEND = 10; // รูปย่อเก็บใน localStorage จึงจำกัดต่อครั้งไว้
+const MAX_PHOTOS_PER_SEND = 10; // รูปย่อเก็บในข้อความ (messages.photos) จึงจำกัดต่อครั้งไว้
 const MAX_PHOTOS_TO_AI = 4; // ส่งให้ AI ดูแค่ 4 รูปแรกต่อครั้ง ประหยัดโควตา
 const NETWORK_ERROR = "ส่งไม่สำเร็จ ตรวจอินเทอร์เน็ตแล้วลองใหม่อีกครั้งนะ";
 
@@ -35,10 +35,20 @@ export function ChatView() {
   const data = useStore();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false); // กำลังย่อรูป
+  // รูปที่แนบไว้เหนือช่องพิมพ์ ยังไม่ส่ง (แบบช่องพิมพ์ของ Claude) กดส่งแล้วไปพร้อมข้อความเป็นข้อความเดียว
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [waiting, setWaiting] = useState(false); // รอ AI ตอบ
   const bottomRef = useRef<HTMLDivElement>(null);
+  const attachmentsRef = useRef<Attachment[]>([]);
   const messages = data?.messages[id] ?? [];
+
+  // ออกจากหน้าแชท → คืนหน่วยความจำของรูปตัวอย่าง
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+  }, [attachments]);
+  useEffect(() => () => attachmentsRef.current.forEach((a) => URL.revokeObjectURL(a.preview)), []);
 
   // ข้อความใหม่ → เลื่อนลงล่างสุด
   useEffect(() => {
@@ -71,7 +81,7 @@ export function ChatView() {
     // ประวัติแชทแบบข้อความล้วน (รูปเก่าไม่ส่งซ้ำ ประหยัดโควตา)
     const history = messages.map((m) => ({
       role: m.from === "bot" ? "assistant" : "user",
-      text: m.text ?? (m.photos ? `[ส่งรูป ${m.photos.length} รูป]` : ""),
+      text: [m.photos ? `[ส่งรูป ${m.photos.length} รูป]` : "", m.text ?? ""].filter(Boolean).join(" "),
     }));
     addMessages(id, [userMessage]);
     setWaiting(true);
@@ -122,36 +132,74 @@ export function ChatView() {
     ]);
   }
 
+  const uploading = attachments.some((a) => a.status === "working");
+  const readyPhotos = attachments.flatMap((a) => (a.status === "ready" && a.photo ? [a.photo] : []));
+  const canSend = !waiting && !uploading && (text.trim().length > 0 || readyPhotos.length > 0);
+
+  // ส่งข้อความ + รูปที่แนบไว้ทั้งหมดเป็นข้อความเดียว (รูปที่อัปโหลดไม่สำเร็จจะไม่ถูกส่ง)
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!text.trim() || waiting) return;
-    send({ text: text.trim() });
+    if (!canSend) return;
+    const imageUrls = readyPhotos.flatMap((p) => (p.url ? [p.url] : [])).slice(0, MAX_PHOTOS_TO_AI);
+    send({ text: text.trim() || undefined, photos: readyPhotos.length > 0 ? readyPhotos : undefined }, imageUrls);
+    attachments.forEach((a) => URL.revokeObjectURL(a.preview));
+    setAttachments([]);
+    setNotice(null);
     setText("");
   }
 
-  async function handlePhotos(list: FileList | null) {
-    const files = Array.from(list ?? []).slice(0, MAX_PHOTOS_PER_SEND);
+  // เลือก/ลาก/วางรูป → ขึ้นเป็นรูปย่อเหนือช่องพิมพ์ทันที แล้วเตรียมรูปเบื้องหลัง
+  // อ่าน EXIF → แปลง HEIC → ย่อ 1600px → อัปโหลดตรงเข้า Supabase Storage (ยังไม่ส่งในแชทจนกว่าจะกดส่ง)
+  function addFiles(list: FileList | File[] | null) {
+    const images = Array.from(list ?? []).filter((f) => isSupported(f) && f.type !== "application/pdf");
+    if (images.length === 0) return;
+    const room = MAX_PHOTOS_PER_SEND - attachments.length;
+    const files = images.slice(0, Math.max(room, 0));
+    setNotice(images.length > files.length ? `แนบได้ครั้งละไม่เกิน ${MAX_PHOTOS_PER_SEND} รูป` : null);
     if (files.length === 0) return;
-    setBusy(true);
-    // อ่าน EXIF → แปลง HEIC → ย่อ 1600px → อัปโหลดตรงเข้า Supabase Storage (ทำทีละรูปพร้อมกัน)
-    const photos = await Promise.all(
-      files.map(async (f, i): Promise<ChatPhoto> => {
-        const prepared = await prepareChatPhoto(f);
+
+    const added: Attachment[] = files.map((file) => ({
+      key: newId(),
+      name: file.name,
+      preview: URL.createObjectURL(file),
+      status: "working",
+    }));
+    setAttachments((list) => [...list, ...added]);
+
+    added.forEach(async (a, i) => {
+      const file = files[i];
+      let photo: ChatPhoto | undefined;
+      try {
+        const prepared = await prepareChatPhoto(file);
         const url = prepared.upload ? await uploadTripFile(id, prepared.upload) : null;
-        return {
-          thumb: prepared.thumb,
-          color: PLACEHOLDER_COLORS[i % PLACEHOLDER_COLORS.length],
-          caption: f.name,
-          url,
-          takenAt: prepared.takenAt,
-          lat: prepared.lat,
-          lng: prepared.lng,
-        };
-      }),
-    );
-    setBusy(false);
-    const imageUrls = photos.flatMap((p) => (p.url ? [p.url] : [])).slice(0, MAX_PHOTOS_TO_AI);
-    send({ photos }, imageUrls);
+        if (url) {
+          photo = {
+            thumb: prepared.thumb,
+            color: PLACEHOLDER_COLORS[i % PLACEHOLDER_COLORS.length],
+            caption: file.name,
+            url,
+            takenAt: prepared.takenAt,
+            lat: prepared.lat,
+            lng: prepared.lng,
+          };
+        }
+      } catch {
+        // อ่านรูปไม่ได้ / เน็ตหลุด → แสดงสถานะผิดพลาด
+      }
+      // ผู้ใช้อาจกด ✕ เอารูปออกไปแล้วระหว่างรอ → setAttachments จะหาไม่เจอและไม่ทำอะไร
+      setAttachments((list) =>
+        list.map((x) => (x.key === a.key ? { ...x, status: photo ? "ready" : "error", photo } : x)),
+      );
+    });
+  }
+
+  function removeAttachment(key: string) {
+    setAttachments((list) => {
+      const target = list.find((a) => a.key === key);
+      if (target) URL.revokeObjectURL(target.preview);
+      return list.filter((a) => a.key !== key);
+    });
+    setNotice(null);
   }
 
   return (
@@ -170,24 +218,47 @@ export function ChatView() {
       </div>
 
       {trip.status === "active" ? (
-        <form onSubmit={handleSend} className="border-t border-line bg-card px-2 py-2">
-          <div className="mx-auto flex max-w-md items-end gap-1">
+        <form
+          onSubmit={handleSend}
+          onDragOver={(e) => {
+            if (!e.dataTransfer.types.includes("Files")) return;
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            addFiles(e.dataTransfer.files);
+          }}
+          className={cx("border-t border-line bg-card px-2 py-2", dragging && "bg-surface")}
+        >
+          <div className="mx-auto max-w-md">
+            {attachments.length > 0 && (
+              <AttachmentTray attachments={attachments} onRemove={removeAttachment} />
+            )}
+            {(notice || attachments.some((a) => a.status === "error")) && (
+              <p className="px-2 pb-1 text-caption text-warning" role="status">
+                {notice ?? "รูปที่อัปโหลดไม่สำเร็จจะไม่ถูกส่ง กด ✕ เพื่อเอาออก แล้วลองแนบใหม่"}
+              </p>
+            )}
+            <div className="flex items-end gap-1">
             <label
               className={cx(
                 "flex size-11 shrink-0 items-center justify-center rounded-full",
-                busy || waiting ? "cursor-wait text-ink-faint" : "cursor-pointer text-ink-muted hover:bg-surface",
+                waiting ? "cursor-wait text-ink-faint" : "cursor-pointer text-ink-muted hover:bg-surface",
               )}
-              aria-label="ส่งรูป"
+              aria-label="แนบรูป"
             >
-              {busy ? <LoaderCircle {...ICON} className="animate-spin" /> : <Camera {...ICON} />}
+              <ImagePlus {...ICON} />
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,.heic,.heif"
                 multiple
-                disabled={busy || waiting}
+                disabled={waiting}
                 className="sr-only"
                 onChange={(e) => {
-                  handlePhotos(e.target.files);
+                  addFiles(e.target.files);
                   e.target.value = "";
                 }}
               />
@@ -200,19 +271,28 @@ export function ChatView() {
                 // Enter ส่ง, Shift+Enter ขึ้นบรรทัดใหม่ (บนคอม)
                 if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) handleSend(e);
               }}
-              placeholder="เล่าเรื่อง ค่าใช้จ่าย หรือที่ที่ไป"
+              onPaste={(e) => {
+                // วางรูปจากคลิปบอร์ด (Ctrl+V) → แนบเป็นรูป
+                const files = Array.from(e.clipboardData.files);
+                if (files.length > 0) {
+                  e.preventDefault();
+                  addFiles(files);
+                }
+              }}
+              placeholder={attachments.length > 0 ? "เล่าเกี่ยวกับรูปเหล่านี้ (ไม่บังคับ)" : "เล่าเรื่อง ค่าใช้จ่าย หรือที่ที่ไป"}
               className="max-h-32 min-h-11 flex-1 resize-none rounded-card bg-surface px-4 py-2.5 text-body text-ink outline-none placeholder:text-ink-faint focus:ring-2 focus:ring-brand"
             />
             <button
               type="submit"
-              disabled={!text.trim() || waiting}
+              disabled={!canSend}
               // ไม่ให้ช่องพิมพ์หลุดโฟกัสตอนกดส่ง คีย์บอร์ดจะได้ไม่ปิด และแถบเมนูไม่เด้งกลับมาดันปุ่ม
               onPointerDown={(e) => e.preventDefault()}
               className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand text-white transition-colors hover:bg-brand-hover disabled:bg-surface disabled:text-ink-faint"
-              aria-label="ส่ง"
+              aria-label={uploading ? "รออัปโหลดรูปให้เสร็จก่อน" : "ส่ง"}
             >
-              <ArrowUp {...ICON} />
+              {uploading ? <LoaderCircle {...ICON} className="animate-spin" /> : <ArrowUp {...ICON} />}
             </button>
+            </div>
           </div>
         </form>
       ) : (
@@ -223,6 +303,53 @@ export function ChatView() {
 
       <TripDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} data={data} currentId={id} />
     </div>
+  );
+}
+
+type Attachment = {
+  key: string;
+  name: string;
+  preview: string; // object URL ของไฟล์ต้นฉบับ (HEIC อาจแสดงไม่ได้จนกว่าจะได้รูปย่อ)
+  status: "working" | "ready" | "error";
+  photo?: ChatPhoto;
+};
+
+// แถบรูปที่แนบไว้เหนือช่องพิมพ์: เลื่อนแนวนอน กด ✕ เอาออกได้ มีสถานะกำลังอัปโหลด/ผิดพลาดบนรูป
+function AttachmentTray({ attachments, onRemove }: { attachments: Attachment[]; onRemove: (key: string) => void }) {
+  return (
+    <ul className="flex gap-2 overflow-x-auto px-1 pt-1 pb-2" aria-label="รูปที่แนบไว้">
+      {attachments.map((a) => (
+        <li key={a.key} className="relative size-16 shrink-0">
+          <div className="size-16 overflow-hidden rounded-control bg-surface">
+            {/* eslint-disable-next-line @next/next/no-img-element -- รูปในเครื่องก่อนอัปโหลด */}
+            <img
+              src={a.photo?.thumb ?? a.preview}
+              alt={a.name}
+              className={cx("size-full object-cover", a.status !== "ready" && "opacity-60")}
+              onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+            />
+          </div>
+          {a.status === "working" && (
+            <span className="absolute inset-0 flex items-center justify-center" aria-label="กำลังอัปโหลด">
+              <LoaderCircle size={20} strokeWidth={2} className="animate-spin text-ink" />
+            </span>
+          )}
+          {a.status === "error" && (
+            <span className="absolute inset-0 flex items-center justify-center rounded-control ring-2 ring-danger" aria-label="อัปโหลดไม่สำเร็จ">
+              <CircleAlert size={20} strokeWidth={2} className="text-danger" />
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => onRemove(a.key)}
+            className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full bg-ink text-white shadow-soft"
+            aria-label={`เอารูป ${a.name} ออก`}
+          >
+            <X size={14} strokeWidth={2.25} />
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -392,7 +519,7 @@ function Bubble({ message: m }: { message: ChatMessage }) {
             )}
           </div>
         )}
-        {m.text && <p className="text-body whitespace-pre-wrap">{m.text}</p>}
+        {m.text && <p className={cx("text-body whitespace-pre-wrap", m.photos && "px-3 pt-1.5 pb-2")}>{m.text}</p>}
       </div>
       {!mine && <span className="text-caption text-ink-faint">{time}</span>}
     </div>

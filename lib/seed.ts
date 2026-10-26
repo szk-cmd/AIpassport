@@ -4,29 +4,37 @@ import { PRICE_PER_DAY } from "./config";
 import { DEMO_SLUG_IDS } from "./demo-ids";
 import { MOCK_TRIPS } from "./mock";
 import { mockActiveTrips } from "./mock-active";
-import { clearStorage, db, OWNER } from "./trips-server";
+import { demoIdFor, demoSlugFor } from "./accounts";
+import { clearStorage, currentOwner, db } from "./trips-server";
 
 function fail(error: { message: string } | null, what: string) {
   if (error) throw new Error(`[seed] ${what}: ${error.message}`);
 }
 
+// รีเซ็ตเฉพาะบัญชีที่ login อยู่ (cookie) ไม่แตะข้อมูลของบัญชีทดสอบอื่น
 export async function resetAccount(mode: "demo" | "empty") {
+  const owner = await currentOwner();
+  const { data: own, error: le } = await db().from("trips").select("id").eq("owner", owner);
+  fail(le, "list trips");
+  const tripIds = (own ?? []).map((t: { id: string }) => t.id);
   // ลบทริปแล้ว messages / trip_items / agent_runs / trip_outputs / shares หายตาม (on delete cascade)
-  const { error } = await db().from("trips").delete().eq("owner", OWNER);
+  const { error } = await db().from("trips").delete().eq("owner", owner);
   fail(error, "delete trips");
-  await clearStorage();
-  if (mode === "demo") await seedDemo();
+  await clearStorage(tripIds);
+  if (mode === "demo") await seedDemo(owner);
 }
 
 // ทริปเดโม is_demo = true: จบแล้ว 3 ทริป (ผลสรุปชุดเดิมจาก lib/mock.ts) + กำลังเที่ยว 2 ทริป (แชทตัวอย่าง is_seed)
-async function seedDemo(now = new Date()) {
-  for (const { slug, summary: s } of MOCK_TRIPS) {
-    const id = DEMO_SLUG_IDS[slug];
+// บัญชี test ใช้ id/slug เดิม บัญชีอื่นได้ id/slug ของตัวเอง (lib/accounts.ts) ข้อมูลเหมือนกัน
+async function seedDemo(owner: string, now = new Date()) {
+  for (const { slug: baseSlug, summary: s } of MOCK_TRIPS) {
+    const id = demoIdFor(owner, DEMO_SLUG_IDS[baseSlug]);
+    const slug = demoSlugFor(owner, baseSlug);
     const { error } = await db()
       .from("trips")
       .insert({
         id,
-        owner: OWNER,
+        owner,
         is_demo: true,
         title: s.title,
         start_date: s.start_date,
@@ -48,10 +56,11 @@ async function seedDemo(now = new Date()) {
     fail(se, `share ${slug}`);
   }
 
-  for (const { trip, messages } of mockActiveTrips(now)) {
+  for (const { trip: base, messages } of mockActiveTrips(now)) {
+    const trip = { ...base, id: demoIdFor(owner, base.id) };
     const { error } = await db()
       .from("trips")
-      .insert({ ...trip, owner: OWNER, is_demo: true });
+      .insert({ ...trip, owner, is_demo: true });
     fail(error, `trip ${trip.title}`);
 
     const { error: me } = await db()

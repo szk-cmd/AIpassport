@@ -44,7 +44,11 @@ export function LoginForm() {
       <Button type="submit" block>
         เข้าสู่ระบบ
       </Button>
-      <p className="text-center text-caption text-white/50">บัญชีทดสอบ: test / 1234</p>
+      <p className="text-center text-caption text-white/50">
+        บัญชีทดสอบ: test, test2, test3, test4 · รหัสผ่าน 1234
+        <br />
+        แต่ละบัญชีมีข้อมูลแยกกัน
+      </p>
     </form>
   );
 }

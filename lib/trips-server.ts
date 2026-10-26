@@ -1,14 +1,20 @@
 // อ่าน/เขียนทริป แชท ไฟล์ และผลสรุปในฐานข้อมูล Supabase (ฝั่ง server เท่านั้น ใช้ service role key)
 // เบราว์เซอร์เรียกผ่าน API route (app/api/...) ไม่ต่อฐานข้อมูลตรง
 import "server-only";
+import { cookies } from "next/headers";
+import { DEFAULT_OWNER, isTestAccount, OWNER_COOKIE } from "./accounts";
 import { getTripBySlug } from "./mock";
 import { photoOf } from "./summary";
 import { createServerSupabase } from "./supabase-server";
 import type { ChatMessage, ChatPhoto, StoreData } from "./trip-store";
 import type { Extracted, TripStatus, TripSummary } from "./types";
 
-// ยังไม่มีระบบสมาชิกจริง: ทุกเครื่องที่ login ด้วยบัญชีทดสอบใช้ข้อมูลชุดเดียวกัน
-export const OWNER = "test";
+// ยังไม่มีระบบสมาชิกจริง: บัญชีทดสอบแต่ละบัญชี (lib/accounts.ts) มีข้อมูลของตัวเอง
+// เบราว์เซอร์ตั้ง cookie ตอน login ไม่มี cookie / ค่าไม่ถูกต้อง = บัญชี test
+export async function currentOwner(): Promise<string> {
+  const value = (await cookies()).get(OWNER_COOKIE)?.value;
+  return isTestAccount(value) ? value : DEFAULT_OWNER;
+}
 export const BUCKET = "trip-files";
 
 export function db() {
@@ -77,7 +83,7 @@ export function toMessage(r: MessageRow): ChatMessage {
 
 // ทุกทริป + แชทของบัญชีทดสอบ (หน้าแรก แชท ลิ้นชัก โหลดจากตรงนี้)
 export async function listData(): Promise<StoreData> {
-  const { data: trips, error } = await db().from("trips").select(TRIP_COLUMNS).eq("owner", OWNER);
+  const { data: trips, error } = await db().from("trips").select(TRIP_COLUMNS).eq("owner", await currentOwner());
   fail(error, "list trips");
   const rows = (trips ?? []) as TripRow[];
   const ids = rows.map((t) => t.id);
@@ -115,7 +121,7 @@ export async function listData(): Promise<StoreData> {
 }
 
 export async function getTrip(id: string): Promise<TripRow | null> {
-  const { data, error } = await db().from("trips").select(TRIP_COLUMNS).eq("id", id).eq("owner", OWNER).maybeSingle();
+  const { data, error } = await db().from("trips").select(TRIP_COLUMNS).eq("id", id).eq("owner", await currentOwner()).maybeSingle();
   fail(error, "get trip");
   return (data as TripRow | null) ?? null;
 }
@@ -164,7 +170,7 @@ export async function createTrip(t: {
 }) {
   const { error } = await db()
     .from("trips")
-    .insert({ ...t, owner: OWNER, status: "active", is_demo: false });
+    .insert({ ...t, owner: await currentOwner(), status: "active", is_demo: false });
   fail(error, "create trip");
   const { error: me } = await db()
     .from("messages")
@@ -182,7 +188,7 @@ type TripPatch = Partial<Pick<TripRow, (typeof PATCHABLE)[number]>>;
 export async function patchTrip(id: string, patch: Record<string, unknown>) {
   const clean: TripPatch = Object.fromEntries(Object.entries(patch).filter(([k]) => PATCHABLE.includes(k as never)));
   if (Object.keys(clean).length === 0) return;
-  const { error } = await db().from("trips").update(clean).eq("id", id).eq("owner", OWNER);
+  const { error } = await db().from("trips").update(clean).eq("id", id).eq("owner", await currentOwner());
   fail(error, "patch trip");
 }
 
@@ -279,15 +285,14 @@ export async function saveOutput(tripId: string, summary: TripSummary) {
 
 // ---------- Storage ----------
 
-// ลบไฟล์ทุกไฟล์ใน bucket ของแอป (ใช้ตอนรีเซ็ตบัญชีทดสอบ ซึ่งเป็นบัญชีเดียวในระบบ)
-export async function clearStorage() {
+// ลบไฟล์ของทริปที่ระบุ (ไฟล์เก็บเป็นโฟลเดอร์ตาม id ทริป) ใช้ตอนรีเซ็ตบัญชีทดสอบ ไม่แตะไฟล์ของบัญชีอื่น
+export async function clearStorage(tripIds: string[]) {
   const storage = db().storage.from(BUCKET);
-  const { data: folders, error } = await storage.list("", { limit: 1000 });
-  fail(error, "list storage");
-  for (const folder of folders ?? []) {
+  for (const folder of tripIds) {
     for (;;) {
-      const { data: files } = await storage.list(folder.name, { limit: 1000 });
-      const paths = (files ?? []).map((f) => `${folder.name}/${f.name}`);
+      const { data: files, error } = await storage.list(folder, { limit: 1000 });
+      fail(error, "list storage");
+      const paths = (files ?? []).map((f) => `${folder}/${f.name}`);
       if (paths.length === 0) break;
       const { error: re } = await storage.remove(paths);
       fail(re, "remove files");

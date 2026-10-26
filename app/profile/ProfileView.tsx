@@ -31,7 +31,7 @@ export function ProfileView() {
         <p className="px-4 pt-4 pb-2 text-xs font-semibold tracking-wider text-brown/50">ข้อมูลทดสอบ</p>
         <button type="button" onClick={() => resetStore()} className={buttonClass}>
           🔄 รีเซ็ตข้อมูลเดโม
-          <span className="block text-xs text-brown/50">กลับไปเป็นทริปตัวอย่างตั้งต้น</span>
+          <span className="block text-xs text-brown/50">กลับไปเป็นทริปตัวอย่างตั้งต้น (เฉพาะบัญชีนี้ ไม่กระทบบัญชีอื่น)</span>
         </button>
         <button type="button" onClick={() => resetStore(true)} className={buttonClass}>
           🧹 ล้างทริปทั้งหมด

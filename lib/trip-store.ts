@@ -2,6 +2,7 @@
 // หน้าเว็บอ่านจากหน่วยความจำ แก้แล้วเห็นผลทันที แล้วค่อยบันทึกขึ้น server (ถ้าบันทึกไม่ได้จะโหลดใหม่ให้ตรงกับ server)
 // การ login ทดสอบยังเก็บใน localStorage ของเครื่อง
 import { useSyncExternalStore } from "react";
+import { isTestAccount, OWNER_COOKIE, TEST_PASSWORD } from "./accounts";
 import type { Extracted, SummaryPhoto, Trip } from "./types";
 
 export type ChatPhoto = {
@@ -174,12 +175,23 @@ export function newId() {
 
 // ---------- login บัญชีทดสอบ (ยังไม่มีระบบสมาชิกจริง) ----------
 
-const TEST_ACCOUNT = { username: "test", password: "1234" };
+// บัญชีทดสอบหลายบัญชี (lib/accounts.ts) รหัสผ่านเดียวกัน ข้อมูลแยกกัน
 const sessionListeners = new Set<() => void>();
+
+// cookie บอก server ว่าเป็นบัญชีไหน (API route อ่านแล้วกรองข้อมูลตามบัญชี)
+function writeOwnerCookie(value: string | null) {
+  const secure = location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = value
+    ? `${OWNER_COOKIE}=${value}; Path=/; Max-Age=${60 * 60 * 24 * 30}; SameSite=Lax${secure}`
+    : `${OWNER_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+}
 
 function readSession() {
   try {
-    return localStorage.getItem(SESSION_KEY);
+    const value = localStorage.getItem(SESSION_KEY);
+    // เครื่องที่ login ไว้ก่อนมี cookie → ตั้ง cookie ให้ตรงกับ session (ไม่งั้น server จะมองเป็นบัญชี test)
+    if (value && !document.cookie.includes(`${OWNER_COOKIE}=${value}`)) writeOwnerCookie(value);
+    return value;
   } catch {
     return null;
   }
@@ -192,6 +204,11 @@ function writeSession(value: string | null) {
   } catch {
     // โหมดส่วนตัว: อยู่แค่ในหน้านี้
   }
+  writeOwnerCookie(value);
+  // เปลี่ยนบัญชี → ทิ้งข้อมูลของบัญชีเดิมแล้วโหลดของบัญชีใหม่
+  cache = null;
+  if (value) refreshStore();
+  notify();
   sessionListeners.forEach((l) => l());
 }
 
@@ -209,8 +226,9 @@ export function useSession(): string | null | undefined {
 }
 
 export function login(username: string, password: string) {
-  const ok = username.trim() === TEST_ACCOUNT.username && password === TEST_ACCOUNT.password;
-  if (ok) writeSession(TEST_ACCOUNT.username);
+  const name = username.trim().toLowerCase();
+  const ok = isTestAccount(name) && password === TEST_PASSWORD;
+  if (ok) writeSession(name);
   return ok;
 }
 
