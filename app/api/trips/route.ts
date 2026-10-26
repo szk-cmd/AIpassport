@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       start_date: b.start_date as string,
       end_date: b.end_date as string,
       planned_days: b.planned_days as number,
-    });
+    }, b.retro === true);
     return Response.json({ ok: true });
   } catch (error) {
     return serverError(error);

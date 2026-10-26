@@ -6,6 +6,7 @@ import { Button, Card, DateField, Input, TopBar } from "@/components/ui";
 import { packagePrice, PRICE_PER_DAY } from "@/lib/config";
 import { formatBaht } from "@/lib/format";
 import { createTrip, dayCount, newId, todayKey } from "@/lib/trip-store";
+import { PastTripForm } from "./PastTripForm";
 
 // สร้างทริปที่กำลังจะเที่ยว แล้วไปเล่าเรื่องต่อในแชท
 // สร้างได้เลยแม้มีทริปอื่นค้างอยู่ (ทริปเดิมค้างแชทไว้ ยังไม่สรุปจนกว่าจะกดจบทริป)
@@ -16,10 +17,13 @@ export function StartForm() {
   const [endDate, setEndDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
+  const [mode, setMode] = useState<"now" | "past">("now");
 
   const dateError = startDate && endDate && endDate < startDate;
-  const canSubmit = title.trim() !== "" && startDate !== "" && endDate !== "" && !dateError;
-  const days = startDate && endDate && !dateError ? dayCount(startDate, endDate) : null;
+  const canSubmit =
+    title.trim() !== "" && startDate !== "" && endDate !== "" && !dateError;
+  const days =
+    startDate && endDate && !dateError ? dayCount(startDate, endDate) : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,45 +52,93 @@ export function StartForm() {
       <TopBar backHref="/" title="ทริปของฉัน" />
       <main className="mx-auto w-full max-w-md px-4 pt-2 pb-8">
         <h1 className="font-sans text-title font-semibold">สร้างทริปใหม่</h1>
-        <p className="mt-2 text-body text-ink-muted">ตั้งชื่อกับวันเที่ยว แล้วเล่าเรื่องระหว่างทางผ่านแชทได้เลย</p>
+        <p className="mt-2 text-body text-ink-muted">
+          {mode === "now"
+            ? "ตั้งชื่อกับวันเที่ยว แล้วเล่าเรื่องระหว่างทางผ่านแชทได้เลย"
+            : "เลือกรูปจากทริปที่ไปมาแล้ว แล้วเล่าย้อนหลังทีละวันในแชท"}
+        </p>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <Input
-            label="ชื่อทริป"
-            placeholder="เช่น เชียงใหม่ 3 วัน"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+        {/* เลือกแบบทริป: เที่ยวอยู่/กำลังจะไป หรือสรุปทริปที่ไปมาแล้ว */}
+        <div
+          className="mt-6 grid grid-cols-2 rounded-control bg-surface p-1"
+          role="tablist"
+          aria-label="แบบทริป"
+        >
+          {(
+            [
+              ["now", "กำลังจะไป / กำลังเที่ยว"],
+              ["past", "ทริปที่ไปมาแล้ว"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={mode === value}
+              onClick={() => setMode(value)}
+              className={`rounded-control px-2 py-2 text-label ${
+                mode === value
+                  ? "bg-card font-semibold text-ink shadow-soft"
+                  : "text-ink-muted"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <DateField label="วันเริ่ม" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            <DateField
-              label="วันจบ (โดยประมาณ)"
-              min={startDate || undefined}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              error={dateError ? "วันจบต้องไม่อยู่ก่อนวันเริ่ม" : undefined}
+        {mode === "past" ? (
+          <PastTripForm />
+        ) : (
+          <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+            <Input
+              label="ชื่อทริป"
+              placeholder="เช่น เชียงใหม่ 3 วัน"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
             />
-          </div>
 
-          {/* ราคาประมาณการ: เสนอเป็นแพ็กเกจตามจำนวนวัน ยังไม่เก็บเงิน */}
-          {days && (
-            <Card>
-              <div className="flex items-baseline justify-between">
-                <span className="text-body">แพ็กเกจ {days} วัน</span>
-                <span className="text-title font-semibold">{formatBaht(packagePrice(days))}</span>
-              </div>
-              <p className="mt-2 text-label text-ink-muted">
-                ต่อทริปเกินกำหนด คิดเพิ่มวันละ {formatBaht(PRICE_PER_DAY)} · ยังไม่เก็บเงินตอนนี้ ชำระตอนจบทริป
+            <div className="grid grid-cols-2 gap-4">
+              <DateField
+                label="วันเริ่ม"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <DateField
+                label="วันจบ (โดยประมาณ)"
+                min={startDate || undefined}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                error={dateError ? "วันจบต้องไม่อยู่ก่อนวันเริ่ม" : undefined}
+              />
+            </div>
+
+            {/* ราคาประมาณการ: เสนอเป็นแพ็กเกจตามจำนวนวัน ยังไม่เก็บเงิน */}
+            {days && (
+              <Card>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-body">แพ็กเกจ {days} วัน</span>
+                  <span className="text-title font-semibold">
+                    {formatBaht(packagePrice(days))}
+                  </span>
+                </div>
+                <p className="mt-2 text-label text-ink-muted">
+                  ต่อทริปเกินกำหนด คิดเพิ่มวันละ {formatBaht(PRICE_PER_DAY)} ·
+                  ยังไม่เก็บเงินตอนนี้ ชำระตอนจบทริป
+                </p>
+              </Card>
+            )}
+
+            <Button type="submit" block disabled={!canSubmit || saving}>
+              เริ่มทริป
+            </Button>
+            {error && (
+              <p className="text-center text-label text-danger">
+                สร้างทริปไม่สำเร็จ ลองใหม่อีกครั้งนะ
               </p>
-            </Card>
-          )}
-
-          <Button type="submit" block disabled={!canSubmit || saving}>
-            เริ่มทริป
-          </Button>
-          {error && <p className="text-center text-label text-danger">สร้างทริปไม่สำเร็จ ลองใหม่อีกครั้งนะ</p>}
-        </form>
+            )}
+          </form>
+        )}
       </main>
     </div>
   );

@@ -52,6 +52,7 @@ function parse(body: unknown): { input: MemoryCollectionInput; imageUrls: string
     input: {
       trip: { title: trip.title, startDate: trip.startDate, endDate: trip.endDate },
       today: b.today as string,
+      retro: b.retro === true,
       history,
       message: { text: message.text.trim(), attachments: [] },
     },

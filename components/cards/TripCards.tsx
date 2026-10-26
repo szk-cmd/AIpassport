@@ -12,11 +12,24 @@ import {
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
+import { EditTripButton } from "@/components/EditTripButton";
 import { Photo } from "@/components/Photo";
 import { QrCode } from "@/components/QrCode";
 import { RouteLine, RouteMap } from "@/components/RouteMap";
-import { ButtonLink, Card, Chip, ICON, StatRow, StatTile } from "@/components/ui";
-import { CATEGORY_LABELS, formatBaht, formatDate, formatDateRange } from "@/lib/format";
+import {
+  ButtonLink,
+  Card,
+  Chip,
+  ICON,
+  StatRow,
+  StatTile,
+} from "@/components/ui";
+import {
+  CATEGORY_LABELS,
+  formatBaht,
+  formatDate,
+  formatDateRange,
+} from "@/lib/format";
 import { photoOf } from "@/lib/summary";
 import type { DayStory, ExpenseCategory, TripSummary } from "@/lib/types";
 import { CopyLinkButton } from "./CopyLinkButton";
@@ -25,7 +38,13 @@ import { seeded, Stamp } from "./Stamp";
 // ตราประทับใช้น้ำตาลแบรนด์ (ตามระบบดีไซน์)
 const STAMP_INK = "#2B2019";
 
-function CardHeading({ title, meta }: { title: React.ReactNode; meta?: React.ReactNode }) {
+function CardHeading({
+  title,
+  meta,
+}: {
+  title: React.ReactNode;
+  meta?: React.ReactNode;
+}) {
   return (
     <div>
       <h2 className="font-sans text-heading font-semibold text-ink">{title}</h2>
@@ -46,11 +65,19 @@ export function CoverCard({ s }: { s: TripSummary }) {
       )}
       <div className="absolute inset-0 bg-gradient-to-b from-brown/10 via-transparent to-brown" />
 
-      <Stamp label="PassportAI" sub="YOUR TRIP, FOREVER" color="#FFFFFF" rotate={-14} className="absolute top-6 right-6 w-24 opacity-80" />
+      <Stamp
+        label="PassportAI"
+        sub="YOUR TRIP, FOREVER"
+        color="#FFFFFF"
+        rotate={-14}
+        className="absolute top-6 right-6 w-24 opacity-80"
+      />
 
       <div className="absolute inset-x-0 bottom-0 p-6">
         <h1 className="font-sans text-title font-semibold">{s.title}</h1>
-        <p className="text-label text-white/70">{formatDateRange(s.start_date, s.end_date)}</p>
+        <p className="text-label text-white/70">
+          {formatDateRange(s.start_date, s.end_date)}
+        </p>
       </div>
     </div>
   );
@@ -79,7 +106,9 @@ export function StatsCard({ s }: { s: TripSummary }) {
           </div>
           <div className="flex gap-2">
             <dt className="text-ink-muted">เฉลี่ยวันละ</dt>
-            <dd className="font-semibold">{formatBaht(Math.round(s.expenses.total / s.stats.days))}</dd>
+            <dd className="font-semibold">
+              {formatBaht(Math.round(s.expenses.total / s.stats.days))}
+            </dd>
           </div>
         </dl>
       </div>
@@ -88,7 +117,15 @@ export function StatsCard({ s }: { s: TripSummary }) {
 }
 
 // ---------- 3) รายวัน ----------
-export function DayCard({ s, day, index }: { s: TripSummary; day: DayStory; index: number }) {
+export function DayCard({
+  s,
+  day,
+  index,
+}: {
+  s: TripSummary;
+  day: DayStory;
+  index: number;
+}) {
   const place = day.places[0] ?? "";
   const photos = day.photo_ids
     .slice(0, 2)
@@ -99,7 +136,10 @@ export function DayCard({ s, day, index }: { s: TripSummary; day: DayStory; inde
     <Card>
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
-          <CardHeading title={day.title} meta={`วันที่ ${index + 1} · ${formatDate(day.date)}`} />
+          <CardHeading
+            title={day.title}
+            meta={`วันที่ ${index + 1} · ${formatDate(day.date)}`}
+          />
         </div>
         <Stamp
           label={place}
@@ -110,7 +150,9 @@ export function DayCard({ s, day, index }: { s: TripSummary; day: DayStory; inde
         />
       </div>
 
-      <div className={`mt-4 grid gap-2 ${photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+      <div
+        className={`mt-4 grid gap-2 ${photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}
+      >
         {photos.map((p) => (
           <Photo
             key={p.id}
@@ -147,19 +189,27 @@ export function ExpensesCard({ s }: { s: TripSummary }) {
   const total = s.expenses.total;
   // รวมตามหมวด เรียงจากมากไปน้อย
   const groups = Object.entries(
-    s.expenses.items.reduce<Partial<Record<ExpenseCategory, { amount: number; count: number }>>>((acc, e) => {
+    s.expenses.items.reduce<
+      Partial<Record<ExpenseCategory, { amount: number; count: number }>>
+    >((acc, e) => {
       const g = acc[e.category] ?? { amount: 0, count: 0 };
       acc[e.category] = { amount: g.amount + e.amount, count: g.count + 1 };
       return acc;
     }, {}),
-  ).sort((a, b) => b[1].amount - a[1].amount) as [ExpenseCategory, { amount: number; count: number }][];
+  ).sort((a, b) => b[1].amount - a[1].amount) as [
+    ExpenseCategory,
+    { amount: number; count: number },
+  ][];
 
   return (
     <Card>
       <CardHeading title="ค่าใช้จ่าย" />
-      <p className="mt-4 text-title font-semibold tabular-nums">{formatBaht(total)}</p>
+      <p className="mt-4 text-title font-semibold tabular-nums">
+        {formatBaht(total)}
+      </p>
       <p className="text-caption text-ink-muted">
-        {s.expenses.items.length} รายการ · เฉลี่ยวันละ {formatBaht(Math.round(total / s.stats.days))}
+        {s.expenses.items.length} รายการ · เฉลี่ยวันละ{" "}
+        {formatBaht(Math.round(total / s.stats.days))}
       </p>
 
       <ul className="mt-6 space-y-4">
@@ -172,15 +222,24 @@ export function ExpensesCard({ s }: { s: TripSummary }) {
                 <Icon {...ICON} className="shrink-0 text-ink-muted" />
                 <span className="flex-1">
                   {CATEGORY_LABELS[cat]}
-                  <span className="ml-2 text-caption text-ink-muted">{g.count} รายการ</span>
+                  <span className="ml-2 text-caption text-ink-muted">
+                    {g.count} รายการ
+                  </span>
                 </span>
-                <span className="font-semibold tabular-nums">{formatBaht(g.amount)}</span>
+                <span className="font-semibold tabular-nums">
+                  {formatBaht(g.amount)}
+                </span>
               </div>
               <div className="mt-2 ml-8 flex items-center gap-2">
                 <div className="h-1.5 flex-1 rounded-full bg-surface">
-                  <div className="h-full rounded-full bg-ink-muted" style={{ width: `${percent}%` }} />
+                  <div
+                    className="h-full rounded-full bg-ink-muted"
+                    style={{ width: `${percent}%` }}
+                  />
                 </div>
-                <span className="w-9 text-right text-caption text-ink-muted tabular-nums">{percent}%</span>
+                <span className="w-9 text-right text-caption text-ink-muted tabular-nums">
+                  {percent}%
+                </span>
               </div>
             </li>
           );
@@ -196,11 +255,16 @@ export function PlacesCard({ s }: { s: TripSummary }) {
 
   // หาวันที่ไปแต่ละที่ (ชื่อใน route กับในเรื่องเล่าอาจสั้นยาวต่างกัน)
   const visitedOn = (name: string) =>
-    s.days.find((d) => d.places.some((p) => p.includes(name) || name.includes(p)))?.date;
+    s.days.find((d) =>
+      d.places.some((p) => p.includes(name) || name.includes(p)),
+    )?.date;
 
   return (
     <Card>
-      <CardHeading title={`ไปมาแล้ว ${s.route.length} ที่`} meta="ตราประทับทุกสถานที่ในทริปนี้" />
+      <CardHeading
+        title={`ไปมาแล้ว ${s.route.length} ที่`}
+        meta="ตราประทับทุกสถานที่ในทริปนี้"
+      />
 
       {/* วางเป็นตาราง 2 คอลัมน์ แล้วขยับ/เอียงแต่ละอันแบบสุ่มคงที่ ให้ดูเหมือนประทับมือ */}
       <div className="relative mt-6" style={{ height: `${rows * 9}rem` }}>
@@ -245,22 +309,37 @@ export function ShareCard({ s, slug }: { s: TripSummary; slug: string }) {
         <div className="w-48 rounded-control bg-card p-2 shadow-soft">
           <QrCode path={path} size={300} fluid light="#FFFFFF" dark="#1C1917" />
         </div>
-        <p className="mt-2 text-caption text-ink-muted">ให้เพื่อนสแกนเพื่อเปิดทริปนี้</p>
+        <p className="mt-2 text-caption text-ink-muted">
+          ให้เพื่อนสแกนเพื่อเปิดทริปนี้
+        </p>
       </div>
 
       <div className="mt-6 space-y-2">
         <CopyLinkButton path={path} />
-        <ButtonLink href={`${path}/social`} block variant="secondary" icon={Smartphone}>
+        <ButtonLink
+          href={`${path}/social`}
+          block
+          variant="secondary"
+          icon={Smartphone}
+        >
           การ์ดโซเชียล
         </ButtonLink>
-        <ButtonLink href={`${path}/print`} block variant="secondary" icon={ImageIcon}>
+        <ButtonLink
+          href={`${path}/print`}
+          block
+          variant="secondary"
+          icon={ImageIcon}
+        >
           กรอบรูป
         </ButtonLink>
         <ButtonLink href={`${path}/order`} block variant="ghost" icon={Printer}>
           สั่งพิมพ์เป็นกรอบรูป
         </ButtonLink>
+        <EditTripButton slug={slug} />
       </div>
-      <p className="mt-4 text-center text-caption text-ink-faint">#PassportAI</p>
+      <p className="mt-4 text-center text-caption text-ink-faint">
+        #PassportAI
+      </p>
     </Card>
   );
 }
@@ -269,7 +348,10 @@ export function ShareCard({ s, slug }: { s: TripSummary; slug: string }) {
 export function MapCard({ s }: { s: TripSummary }) {
   return (
     <Card>
-      <CardHeading title="เส้นทาง" meta={`${s.route.length} จุด · ${s.stats.distance_km} กม.`} />
+      <CardHeading
+        title="เส้นทาง"
+        meta={`${s.route.length} จุด · ${s.stats.distance_km} กม.`}
+      />
       <div className="mt-4">
         <RouteMap route={s.route} />
       </div>

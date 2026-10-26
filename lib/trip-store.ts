@@ -21,6 +21,7 @@ export type ChatMessage = {
   text?: string;
   photos?: ChatPhoto[];
   extracted?: Extracted; // สถานที่/ค่าใช้จ่ายที่ AI ดึงจากข้อความนี้ (Agent 01)
+  storyDate?: string; // ทริปย้อนหลัง: ข้อความนี้เล่าถึงวันไหน "YYYY-MM-DD"
   at: string; // ISO
 };
 
@@ -133,7 +134,9 @@ export function updateMessage(tripId: string, messageId: string, patch: Partial<
 }
 
 // สร้างทริปใหม่ (server เพิ่มข้อความต้อนรับให้) แล้วโหลดข้อมูลใหม่
-export async function createTrip(trip: Pick<Trip, "id" | "title" | "start_date" | "end_date" | "planned_days">) {
+export async function createTrip(
+  trip: Pick<Trip, "id" | "title" | "start_date" | "end_date" | "planned_days"> & { retro?: boolean },
+) {
   const res = await send("/api/trips", "POST", trip);
   if (!res.ok) throw new Error("สร้างทริปไม่สำเร็จ");
   await refreshStore();
@@ -160,6 +163,11 @@ export async function addItems(
 export async function resetStore(empty = false) {
   await send("/api/demo/reset", "POST", { mode: empty ? "empty" : "demo" });
   await refreshStore();
+}
+
+// ทริปย้อนหลัง = สร้างหลังวันจบทริปไปแล้ว (เล่าทีละวัน ไม่ถามต่อทริป)
+export function isRetroTrip(t: Pick<Trip, "end_date" | "created_at">) {
+  return t.end_date < todayKey(new Date(t.created_at));
 }
 
 // ทริปที่กำลังเที่ยว (มีค้างไว้ได้หลายทริป) เรียงตามแชทล่าสุดก่อน

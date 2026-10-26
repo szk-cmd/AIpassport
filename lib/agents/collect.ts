@@ -173,7 +173,8 @@ export async function runCollect(trip: TripInfo & { is_demo: boolean }): Promise
   const placesByDate = new Map<string, Set<string>>();
   const textsByDate = new Map<string, string[]>();
   for (const m of userMessages) {
-    const date = clampDate(bangkokDate(m.created_at), startDate, endDate);
+    // ทริปย้อนหลัง: ผู้ใช้เลือกวันที่เล่าเอง (story_date) ไม่งั้นใช้วันที่ส่งข้อความ
+    const date = clampDate(m.story_date ?? bangkokDate(m.created_at), startDate, endDate);
     if (m.text?.trim()) textsByDate.set(date, [...(textsByDate.get(date) ?? []), m.text.trim()]);
     for (const p of m.extracted?.places ?? []) {
       placesByDate.set(date, (placesByDate.get(date) ?? new Set()).add(p));

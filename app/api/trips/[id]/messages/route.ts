@@ -10,6 +10,7 @@ function validMessage(m: unknown): m is ChatMessage {
   const x = m as Record<string, unknown>;
   if (!x || !isUuid(x.id) || (x.from !== "user" && x.from !== "bot") || typeof x.at !== "string") return false;
   if (x.text !== undefined && (typeof x.text !== "string" || x.text.length > MAX_TEXT)) return false;
+  if (x.storyDate !== undefined && (typeof x.storyDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(x.storyDate))) return false;
   if (x.photos !== undefined) {
     if (!Array.isArray(x.photos) || x.photos.length > MAX_PHOTOS) return false;
     for (const p of x.photos as Record<string, unknown>[]) {

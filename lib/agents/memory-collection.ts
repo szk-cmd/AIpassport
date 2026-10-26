@@ -7,7 +7,8 @@ import type { Extracted } from "../types";
 
 export type MemoryCollectionInput = {
   trip: { title: string; startDate: string; endDate: string };
-  today: string; // "YYYY-MM-DD" ตามเครื่องผู้ใช้
+  today: string; // "YYYY-MM-DD" ตามเครื่องผู้ใช้ (ทริปย้อนหลัง = วันที่ผู้ใช้กำลังเล่าถึง)
+  retro?: boolean; // ทริปที่จบไปแล้ว ผู้ใช้เล่าย้อนหลังทีละวัน
   history: AiMessage[]; // ข้อความก่อนหน้า (ล่าสุดอยู่ท้าย) ไม่รวมข้อความนี้
   message: { text: string; attachments: AiAttachment[] };
 };
@@ -17,10 +18,15 @@ export type MemoryCollectionResult = {
   extracted: Extracted | null; // null = ไม่ได้ดึง หรือดึงไม่สำเร็จ (ไม่กระทบคำตอบ)
 };
 
-function tripContext({ trip, today }: MemoryCollectionInput) {
+function tripContext({ trip, today, retro }: MemoryCollectionInput) {
   const day = Math.round((Date.parse(today) - Date.parse(trip.startDate)) / 86_400_000) + 1;
   const total = Math.round((Date.parse(trip.endDate) - Date.parse(trip.startDate)) / 86_400_000) + 1;
-  return `ข้อมูลทริป: "${trip.title}" วันที่ ${trip.startDate} ถึง ${trip.endDate} (${total} วัน)
+  const info = `ข้อมูลทริป: "${trip.title}" วันที่ ${trip.startDate} ถึง ${trip.endDate} (${total} วัน)`;
+  return retro
+    ? `${info}
+ทริปนี้จบไปแล้ว ผู้ใช้กำลังเล่าย้อนหลัง ข้อความนี้เป็นเรื่องของวันที่ ${day} (${today}) ใช้คำพูดแบบอดีต
+ถ้าเรื่องของวันนี้ดูครบแล้ว ชวนให้เลือกวันถัดไปที่แถบเลือกวันด้านล่าง`
+    : `${info}
 วันนี้ ${today} = วันที่ ${day} ของทริป`;
 }
 

@@ -1,14 +1,42 @@
 "use client";
 
-import { ChevronRight, MapPin, MessageCircle, Plus, Stamp as StampIcon } from "lucide-react";
+import {
+  ChevronRight,
+  MapPin,
+  MessageCircle,
+  Plus,
+  Stamp as StampIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { Photo } from "@/components/Photo";
-import { ButtonLink, Card, Chip, EmptyState, ICON, ListItem, StatRow, StatTile } from "@/components/ui";
+import {
+  ButtonLink,
+  Card,
+  Chip,
+  EmptyState,
+  ICON,
+  ListItem,
+  StatRow,
+  StatTile,
+} from "@/components/ui";
 import { formatDateRange } from "@/lib/format";
 import { MOCK_SLUG } from "@/lib/mock";
-import { activeTrips, dayCount, todayKey, useStore, type StoreData, type StoredTrip } from "@/lib/trip-store";
+import {
+  activeTrips,
+  dayCount,
+  todayKey,
+  useStore,
+  type StoreData,
+  type StoredTrip,
+  isRetroTrip,
+} from "@/lib/trip-store";
 
-const STATUS_LABEL = { ended: "รอชำระเงิน", paid: "กำลังสร้างพาสปอร์ต", completed: null, active: null } as const;
+const STATUS_LABEL = {
+  ended: "รอชำระเงิน",
+  paid: "กำลังสร้างพาสปอร์ต",
+  completed: null,
+  active: null,
+} as const;
 
 function tripHref(t: StoredTrip) {
   if (t.status === "active") return `/trip/${t.id}/chat`;
@@ -23,7 +51,9 @@ export function TripHistory() {
   if (!data) return null;
 
   const active = activeTrips(data);
-  const past = data.trips.filter((t) => t.status !== "active").sort((a, b) => b.start_date.localeCompare(a.start_date));
+  const past = data.trips
+    .filter((t) => t.status !== "active")
+    .sort((a, b) => b.start_date.localeCompare(a.start_date));
 
   return (
     <div className="min-h-dvh bg-canvas text-ink">
@@ -66,7 +96,9 @@ export function TripHistory() {
 
             {past.length > 0 && (
               <section className="mt-12">
-                <h2 className="font-sans text-heading font-semibold">ทริปที่ผ่านมา</h2>
+                <h2 className="font-sans text-heading font-semibold">
+                  ทริปที่ผ่านมา
+                </h2>
                 <Card padded={false} className="mt-4 overflow-hidden">
                   <ul className="divide-y divide-line">
                     {past.map((t) => (
@@ -88,10 +120,18 @@ export function TripHistory() {
 // การ์ดปกทริปที่กำลังเที่ยว (ที่เดียวในหน้านี้ที่ใช้น้ำตาลแบรนด์)
 function ActiveCard({ trip, data }: { trip: StoredTrip; data: StoreData }) {
   const total = dayCount(trip.start_date, trip.end_date);
-  const day = Math.min(Math.max(dayCount(trip.start_date, todayKey()), 1), total);
+  const day = Math.min(
+    Math.max(dayCount(trip.start_date, todayKey()), 1),
+    total,
+  );
   const overdue = todayKey() > trip.end_date;
+  const retro = isRetroTrip(trip);
   const last = data.messages[trip.id]?.at(-1);
-  const preview = last?.text ?? (last?.photos ? `ส่งรูป ${last.photos.length} รูป` : "เริ่มเล่าเรื่องทริปได้เลย");
+  const preview =
+    last?.text ??
+    (last?.photos
+      ? `ส่งรูป ${last.photos.length} รูป`
+      : "เริ่มเล่าเรื่องทริปได้เลย");
 
   return (
     <Link
@@ -101,12 +141,20 @@ function ActiveCard({ trip, data }: { trip: StoredTrip; data: StoreData }) {
       <div className="flex items-center justify-between text-caption">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 font-semibold">
           <span className="size-1.5 rounded-full bg-success" aria-hidden />
-          กำลังเที่ยว
+          {retro ? "กำลังเล่าย้อนหลัง" : "กำลังเที่ยว"}
         </span>
-        <span className="text-white/60">{overdue ? "เลยวันจบแล้ว · รอกดจบทริป" : `วันที่ ${day} จาก ${total}`}</span>
+        <span className="text-white/60">
+          {retro
+            ? `${total} วัน · รอกดจบทริป`
+            : overdue
+              ? "เลยวันจบแล้ว · รอกดจบทริป"
+              : `วันที่ ${day} จาก ${total}`}
+        </span>
       </div>
       <p className="mt-4 text-heading font-semibold">{trip.title}</p>
-      <p className="text-label text-white/60">{formatDateRange(trip.start_date, trip.end_date)}</p>
+      <p className="text-label text-white/60">
+        {formatDateRange(trip.start_date, trip.end_date)}
+      </p>
       <div className="mt-4 flex items-center gap-2 text-label text-white/80">
         <MessageCircle {...ICON} size={16} className="shrink-0 text-white/50" />
         <span className="min-w-0 flex-1 truncate">{preview}</span>
@@ -119,7 +167,10 @@ function ActiveCard({ trip, data }: { trip: StoredTrip; data: StoreData }) {
 // ตัวเลขสรุป + ชิปสถานที่ที่เคยไป (จากผลสรุปของแต่ละทริป)
 function Summary({ trips }: { trips: StoredTrip[] }) {
   const places = [...new Set(trips.flatMap((t) => t.places))];
-  const days = trips.reduce((sum, t) => sum + dayCount(t.start_date, t.end_date), 0);
+  const days = trips.reduce(
+    (sum, t) => sum + dayCount(t.start_date, t.end_date),
+    0,
+  );
 
   return (
     <section className="mt-12">
@@ -151,20 +202,35 @@ function PastTripRow({ trip, data }: { trip: StoredTrip; data: StoreData }) {
       href={tripHref(trip)}
       leading={
         <span className="block size-12 overflow-hidden rounded-control">
-          {cover ? <Photo photo={cover} hidePlace className="size-full" /> : <ChatThumb photo={chatPhoto} />}
+          {cover ? (
+            <Photo photo={cover} hidePlace className="size-full" />
+          ) : (
+            <ChatThumb photo={chatPhoto} />
+          )}
         </span>
       }
       title={trip.title}
       subtitle={formatDateRange(trip.start_date, trip.end_date)}
-      trailing={label && <span className="font-semibold text-warning">{label}</span>}
+      trailing={
+        label && <span className="font-semibold text-warning">{label}</span>
+      }
     />
   );
 }
 
-function ChatThumb({ photo }: { photo?: { thumb: string | null; color: string } }) {
+function ChatThumb({
+  photo,
+}: {
+  photo?: { thumb: string | null; color: string };
+}) {
   if (photo?.thumb) {
     // eslint-disable-next-line @next/next/no-img-element -- รูปย่อจากแชทในเครื่อง
     return <img src={photo.thumb} alt="" className="size-full object-cover" />;
   }
-  return <span className="block size-full" style={{ background: photo?.color ?? "#1E6B63" }} />;
+  return (
+    <span
+      className="block size-full"
+      style={{ background: photo?.color ?? "#1E6B63" }}
+    />
+  );
 }

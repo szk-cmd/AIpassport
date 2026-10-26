@@ -44,6 +44,7 @@ type MessageRow = {
   photos: ChatPhoto[] | null;
   extracted: Extracted | null;
   is_seed: boolean;
+  story_date?: string | null; // ทริปย้อนหลัง (migration 20261026)
   created_at: string;
 };
 
@@ -76,6 +77,7 @@ export function toMessage(r: MessageRow): ChatMessage {
     ...(r.text != null && { text: r.text }),
     ...(r.photos && r.photos.length > 0 && { photos: r.photos }),
     ...(r.extracted && { extracted: r.extracted }),
+    ...(r.story_date && { storyDate: r.story_date }),
   };
 }
 
@@ -161,13 +163,16 @@ export async function getSummaryBySlug(slug: string): Promise<{ slug: string; su
 
 // ---------- เขียน ----------
 
-export async function createTrip(t: {
-  id: string;
-  title: string;
-  start_date: string;
-  end_date: string;
-  planned_days: number;
-}) {
+export async function createTrip(
+  t: {
+    id: string;
+    title: string;
+    start_date: string;
+    end_date: string;
+    planned_days: number;
+  },
+  retro = false,
+) {
   const { error } = await db()
     .from("trips")
     .insert({ ...t, owner: await currentOwner(), status: "active", is_demo: false });
@@ -177,7 +182,9 @@ export async function createTrip(t: {
     .insert({
       trip_id: t.id,
       sender: "bot",
-      text: `เริ่มทริป “${t.title}” แล้ว! ส่งรูป เล่าเรื่อง หรือถ่ายใบเสร็จมาได้ตลอดทริป เดี๋ยวผมจดให้ทั้งหมด`,
+      text: retro
+        ? `สร้างทริปย้อนหลัง “${t.title}” แล้ว! เลือกวันที่แถบด้านล่าง แล้วเล่าว่าวันนั้นไปไหน กินอะไร ใช้เงินไปเท่าไร ส่งรูปหรือใบเสร็จเพิ่มก็ได้ เล่าครบแล้วกด “จบทริป” เพื่อสรุปเป็นพาสปอร์ต`
+        : `เริ่มทริป “${t.title}” แล้ว! ส่งรูป เล่าเรื่อง หรือถ่ายใบเสร็จมาได้ตลอดทริป เดี๋ยวผมจดให้ทั้งหมด`,
     });
   fail(me, "welcome message");
 }
@@ -212,6 +219,8 @@ export async function addMessages(tripId: string, messages: ChatMessage[]) {
     photos: m.photos ?? [],
     extracted: m.extracted ?? null,
     created_at: m.at,
+    // ใส่คอลัมน์นี้เฉพาะเมื่อมีค่า ฐานข้อมูลที่ยังไม่ได้รัน migration 20261026 จะได้ไม่พัง
+    ...(m.storyDate && { story_date: m.storyDate }),
   }));
   const { error } = await db().from("messages").insert(rows);
   fail(error, "add messages");
