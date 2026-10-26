@@ -90,6 +90,7 @@ export type RoutePoint = {
   name: string;
   lat: number;
   lng: number;
+  date?: string; // วันที่ในทริป (แยกสีเส้นทางตามวัน) ผลสรุปแบบเก่าไม่มี
 };
 
 // ข้อมูลที่ AI ดึงจากข้อความ/รูปในแชท (lib/ai.ts extract) ภายหลังจะบันทึกลง trip_items

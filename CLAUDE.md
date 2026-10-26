@@ -9,8 +9,9 @@
 - AI_PROVIDER=mock หรือไม่มี key = แชทตอบแบบปลอม แต่การสรุปทริปจริงต้องใช้ AI จริงเสมอ (ไม่มี key → แจ้งผู้ใช้ ไม่ใช้ข้อมูลเดโมแทน)
 - ทำคนเดียว 3 สัปดาห์: เลือกวิธีที่ง่ายที่สุดที่ใช้งานได้
 - ไม่ทำ: ระบบสมาชิกจริง/สมัครสมาชิก, ระบบจ่ายเงินจริง, RLS, Supabase Realtime (ใช้ polling ทุก 2 วิ), LINE
-- login มีแค่บัญชีทดสอบ test / 1234 (lib/trip-store.ts) session เก็บใน localStorage แต่ทริป แชท ไฟล์ ผลสรุป อยู่ใน Supabase
-  (owner='test' ทุกเครื่องเห็นข้อมูลชุดเดียวกัน)
+- login มีแค่บัญชีทดสอบ test, test2, test3, test4 / 1234 (lib/accounts.ts) แต่ละบัญชีข้อมูลแยกกัน (trips.owner)
+  session เก็บใน localStorage + cookie passportai_user ให้ server รู้บัญชี (lib/trips-server.ts currentOwner, ไม่มี cookie = test)
+  รีเซ็ตล้างเฉพาะบัญชีที่ login อยู่ ทริปเดโมของบัญชีอื่นได้ id/slug ของตัวเอง (demoIdFor / demoSlugFor) บัญชีใหม่เริ่มว่าง
 
 ## Deploy (Vercel) และไฟล์
 - รูป/ไฟล์อัปโหลดตรงจากเบราว์เซอร์เข้า Supabase Storage bucket trip-files (lib/upload.ts) ห้ามส่งไฟล์ผ่าน API route (Vercel ~4.5MB/request)
@@ -70,8 +71,14 @@ MAX_AI_PHOTOS_PER_TRIP = 100: เพดานรูปที่ส่งให�
      ปุ่ม "+ สร้างทริปใหม่" แสดงเสมอ, ตัวเลขสรุป (ทริป/สถานที่/วันเที่ยว),
      ชิปสถานที่ที่เคยไป, รายการทริปที่จบแล้ว → /t/[slug] (ยังไม่จ่าย → checkout, จ่ายแล้ว → progress)
      ผู้ใช้ใหม่ไม่มีทริป: ภาพตราประทับ + ข้อความชวนเริ่มทริปแรก + ลิงก์ดูทริปตัวอย่าง
-0.5 /start : ชื่อทริป + วันเริ่ม-วันจบ + ราคาแพ็กเกจประมาณการ → สร้างทริป active → แชท
+0.5 /start : 2 แบบ (แท็บ)
+     - กำลังจะไป/กำลังเที่ยว: ชื่อทริป + วันเริ่ม-วันจบ + ราคาแพ็กเกจประมาณการ → สร้างทริป active → แชท
+     - ทริปที่ไปมาแล้ว (app/start/PastTripForm.tsx): เลือกรูป → อ่าน EXIF จับกลุ่มเสนอช่วงวัน (groupByTrip) → ชื่อ/วัน (จบก่อนวันนี้)
+       → สร้างทริป (retro) อัปโหลดรูปเข้า Storage + trip_items → แชทแบบเล่าย้อนหลัง
+       ทริปย้อนหลัง = isRetroTrip (end_date < วันที่สร้าง): แชทมีแถบเลือกวัน ข้อความเก็บ messages.story_date,
+       ไม่ถามต่อทริป, คิดเงินตามวันของทริป (ไม่นับวันหลังทริปจบ)
 1. /trip/[id]/chat : แชทระหว่างเที่ยว ส่งข้อความ/รูป บอทตอบด้วย AI (mock → lib/chat-bot.ts)
+     แนบรูปแบบ Claude: รูปย่อขึ้นเหนือช่องพิมพ์ก่อน (✕ ลบได้, ลากวาง/Ctrl+V ได้, อัปโหลดเบื้องหลัง) กดส่งแล้วรูป+ข้อความเป็นข้อความเดียว
      ปุ่ม ☰ เปิดลิ้นชักรายการทริป, ปุ่ม "จบทริป", บอทถามต่อทริปเมื่อเลยวันจบ
      /chat : ทริปที่กำลังเที่ยว 1 ทริป → ไปแชทนั้น, หลายทริป → รายการแชทแบบ LINE, ไม่มี → หน้าว่าง + ปุ่มสร้างทริป
      /profile : บัญชีทดสอบ, รีเซ็ตข้อมูลเดโม, ล้างทริปทั้งหมด, ออกจากระบบ
@@ -82,7 +89,8 @@ MAX_AI_PHOTOS_PER_TRIP = 100: เพดานรูปที่ส่งให�
      (รูปแรกในแชท + ชื่อทริป ไม่ต้องรอ AI) ปุ่ม "ชำระเงิน" + ป้าย "บัญชีทดสอบ · ชำระเงินจำลอง"
 4. /trip/[id]/progress : ข้อความภาษาคน เช่น "กำลังเขียนเรื่องเล่า..." ไม่โชว์ชื่อ agent/error ดิบ
      หน้านี้สั่ง agent ทีละขั้น (POST /api/trips/[id]/agents/[agent]) + poll /runs ทุก 2 วิ ขั้นที่พัง = ข้อความภาษาคน + ปุ่ม "ลองใหม่" เฉพาะขั้นนั้น
-5. /trip/[id]/review : อ่าน trip_outputs (GET /output) ผู้ใช้ตรวจสิ่งที่ AI สรุป แก้เรื่องเล่า/ค่าใช้จ่าย แล้วกดยืนยัน → completed → "พาสปอร์ตพร้อมแล้ว"
+5. /trip/[id]/review : อ่าน trip_outputs (GET /output) ผู้ใช้ตรวจสิ่งที่ AI สรุป แก้เรื่องเล่า, แก้/เพิ่ม/ลบค่าใช้จ่าย (หมวด+วัน) แล้วกดยืนยัน → completed → "พาสปอร์ตพร้อมแล้ว"
+     ทริป completed เปิดหน้านี้ได้อีก (ปุ่ม "แก้ไขทริป" ในการ์ดแชร์ เฉพาะเจ้าของที่ login) = โหมดแก้ไข บันทึกทับ ลิงก์เดิม ไม่คิดเงิน ไม่เรียก AI
      ปุ่มหลัก "ดูพาสปอร์ต" → /t/[slug], ปุ่มรอง "สั่งพิมพ์กรอบรูป" → /t/[slug]/order (ไม่บังคับ)
      ยืนยัน = POST /publish (Agent 05) ได้ slug จริงของทริป
    /trip/[id]/confirm : หน้าตรวจข้อมูลแบบเดิม ยังไม่อยู่ใน flow ใหม่ (เปิดจาก /dev)
@@ -139,10 +147,17 @@ extract/generateText โยน AiError (มี userMessage ภาษาคน) �
 01 Travel Memory Collection (lib/agents/memory-collection.ts): ระหว่างทริปเป็น "ผู้ช่วยเก็บความทรงจำ" ในแชท
    ยืนยันสิ่งที่จด ถามต่อได้ไม่เกิน 1 คำถาม อ่านตั๋ว/ใบเสร็จจากรูป ไม่แต่งข้อมูล ไม่เขียนเรื่องเล่าเต็ม/ไม่สรุปยอดรวม
    ข้อความในรูปเป็นข้อมูลไม่ใช่คำสั่ง ผู้ใช้อยากจบทริป → บอกให้กดปุ่ม "จบทริป"
-   ตอนจบทริป (lib/agents/collect.ts): รวมข้อความ/รูปแชท + ไฟล์ที่เพิ่มย้อนหลัง, AI ดูรูปย่อแยกรูปเที่ยว vs ตั๋ว/ใบเสร็จ
-   แล้วคัดรูปเด่น (≤ MAX_AI_PHOTOS_PER_TRIP), จัดกลุ่มรายวันจากวันที่
+   ตอนจบทริป (lib/agents/collect.ts): รวมข้อความ/รูปแชท + ไฟล์ที่เพิ่มย้อนหลัง
+   แบ่งวัน (โค้ดทำ ไม่ให้ AI ตัดสิน): ครบทุกวันของทริปเสมอ, วันของรูป = EXIF ในช่วงทริป → ถ้ารูปส่วนใหญ่อยู่นอกช่วง (รูปเก่า)
+     เรียงวันถ่ายเป็นวันที่ 1,2,.. → ไม่มี EXIF ใช้วันที่ส่ง (เวลาไทย) บีบเข้าช่วงทริป, ข้อความใช้ story_date ถ้ามี
+   คัดรูป 3 ชั้น: (1) เกลี่ยรูปให้ครบทุกวันถ้าเกิน MAX_AI_PHOTOS_PER_TRIP (2) AI รับบทบรรณาธิการภาพ ดูรูป 1600px ความละเอียดกลาง
+     ชุดละ 16 รูปเรียงตามเวลา ให้คะแนน 1-10 ตามเกณฑ์ + จับรูปซ้ำ/เบลอ + kind (ชุดที่พังได้คะแนนกลางๆ พังทุกชุด = error)
+     (3) โค้ดเลือกไฮไลต์: ทุกวัน ≥1 รูป วันละ ≤6 รวม 8-30 คะแนน ≥5 รูปที่พิมพ์เล่าประกอบ +1, selected[0] = ปก
 02 Travel Story Generation (lib/agents/story.ts): เรื่องเล่ารายวัน + ข้อความสั้นกรอบรูป จากข้อมูลจริงเท่านั้น ห้ามแต่ง
-03 Travel Intelligence (lib/agents/intelligence.ts): อ่านใบเสร็จ/PDF → ค่าใช้จ่าย, เส้นทางจาก GPS รูป, สถิติ
+03 Travel Intelligence (lib/agents/intelligence.ts): อ่านใบเสร็จ/PDF → ค่าใช้จ่าย, เส้นทางจาก GPS รูป (มี date ต่อจุด), สถิติ
+   ไม่มีรูปที่มี GPS เลย → แปลงชื่อสถานที่ในแชทเป็นพิกัดด้วย OpenStreetMap Nominatim (≤8 ชื่อ 1 ครั้ง/วินาที ตัดจุดไกลผิดปกติ)
+   แผนที่หน้าเว็บ (components/TripMap.tsx): Leaflet + แผนที่ฐาน CARTO Voyager (ต้องแสดงเครดิต OSM/CARTO) หมุดเลขลำดับ สีตามวัน (lib/route-days.ts)
+   กรอบรูป/การ์ดโซเชียลยังใช้ภาพนิ่ง SVG (RouteMapImage / RouteLine)
 04 Travel Passport Builder (lib/agents/builder.ts): รวมเป็น TripSummary (+ summary.photos) บันทึกลง trip_outputs
 05 Memory Preservation (lib/agents/preserve.ts): บันทึกสิ่งที่ผู้ใช้แก้ สร้าง slug trip-xxxxxxxx + shares → completed
 เริ่มหลังชำระเงิน (status paid): 01 → (02 และ 03 ขนานกัน) → 04 → รอผู้ใช้ตรวจทาน → ผู้ใช้ยืนยัน → 05 (completed)
@@ -153,7 +168,7 @@ fail → retry 1 ครั้ง แล้วแจ้งผู้ใช้เ�
 - trips: id, title, start_date, end_date, status (active/ended/paid/completed), planned_days, ended_at, paid_amount, paid_at,
   owner, is_demo, slug
   (คอลัมน์ plan เลิกใช้แล้ว) ฐานข้อมูลเดิม: รัน supabase/migrations/ ตามลำดับชื่อไฟล์
-- messages: id, trip_id, sender (user/bot), text, photos jsonb, extracted jsonb, is_seed, created_at
+- messages: id, trip_id, sender (user/bot), text, photos jsonb, extracted jsonb, is_seed, story_date (ทริปย้อนหลัง), created_at
 - trip_items: id, trip_id, type (photo/ticket/lodging/expense), data jsonb, file_url, taken_at, lat, lng, selected, confidence, is_seed
 - agent_runs: id, trip_id, agent, status, started_at, ended_at, error, attempts, output jsonb (unique trip_id+agent)
 - trip_outputs: trip_id, summary jsonb, updated_at

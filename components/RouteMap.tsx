@@ -1,3 +1,5 @@
+import { TripMap } from "@/components/TripMap";
+import { dayColor, dayIndexOf } from "@/lib/route-days";
 import type { RoutePoint } from "@/lib/types";
 
 // แปลงพิกัด lat/lng เป็นตำแหน่ง x/y ในกรอบขนาด w×h (สเกลเท่ากันทั้งสองแกน แผนที่จะได้ไม่บิด)
@@ -24,18 +26,33 @@ function project(route: RoutePoint[], w: number, h: number, pad: number) {
 const W = 320;
 const H = 240;
 
-// แผนที่แบบง่าย: วางจุดตามพิกัดจริงแล้วลากเส้นตามลำดับ (ยังไม่ใช้แผนที่โลกจริง)
+// หน้าเว็บ: แผนที่จริง (เลื่อน/ซูมได้) + รายชื่อจุดเรียงตามเวลา แยกสีตามวัน
+// กรอบรูปสำหรับพิมพ์ใช้ RouteMapImage (ภาพนิ่ง) ด้านล่างแทน
 export function RouteMap({ route }: { route: RoutePoint[] }) {
   if (route.length === 0) return null;
+  const dayOf = dayIndexOf(route);
+  const hasDays = route.some((p) => p.date);
 
   return (
     <div>
-      <RouteMapImage route={route} tone="light" className="w-full rounded-control" />
+      <TripMap route={route} />
       <ol className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-label text-ink">
         {route.map((p, i) => (
-          <li key={p.name} className="flex gap-2">
-            <span className="font-semibold text-ink-muted tabular-nums">{i + 1}</span>
-            {p.name}
+          <li key={p.name} className="flex items-start gap-2">
+            <span
+              className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full text-caption font-semibold text-white tabular-nums"
+              style={{ background: dayColor(dayOf(p)) }}
+            >
+              {i + 1}
+            </span>
+            <span className="min-w-0">
+              {p.name}
+              {hasDays && (
+                <span className="block text-caption text-ink-muted">
+                  วันที่ {dayOf(p) + 1}
+                </span>
+              )}
+            </span>
           </li>
         ))}
       </ol>
@@ -45,8 +62,22 @@ export function RouteMap({ route }: { route: RoutePoint[] }) {
 
 // สีแผนที่: dark = แบบเดิม (กรอบรูปสำหรับพิมพ์), light = ระบบดีไซน์ใหม่ในหน้าเว็บ (พื้นเทาอ่อน เส้นทึบ)
 const MAP_TONES = {
-  dark: { bg: "#1E6B63", grid: "#F7F2EA", line: "#E8A93C", dash: "6 5", dot: "#E0642C", ring: "#F7F2EA" },
-  light: { bg: "#F2F1EE", grid: "#1C1917", line: "#57534E", dash: undefined, dot: "#C2410C", ring: "#FFFFFF" },
+  dark: {
+    bg: "#1E6B63",
+    grid: "#F7F2EA",
+    line: "#E8A93C",
+    dash: "6 5",
+    dot: "#E0642C",
+    ring: "#F7F2EA",
+  },
+  light: {
+    bg: "#F2F1EE",
+    grid: "#1C1917",
+    line: "#57534E",
+    dash: undefined,
+    dot: "#C2410C",
+    ring: "#FFFFFF",
+  },
 } as const;
 
 // ภาพแผนที่อย่างเดียว (ไม่มีรายชื่อสถานที่) ใช้ในหน้าทริปและกรอบรูปสำหรับพิมพ์
@@ -71,8 +102,18 @@ export function RouteMapImage({
       aria-label="แผนที่เส้นทาง"
     >
       <defs>
-        <pattern id={`grid-${tone}`} width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke={c.grid} strokeOpacity="0.06" />
+        <pattern
+          id={`grid-${tone}`}
+          width="20"
+          height="20"
+          patternUnits="userSpaceOnUse"
+        >
+          <path
+            d="M 20 0 L 0 0 0 20"
+            fill="none"
+            stroke={c.grid}
+            strokeOpacity="0.06"
+          />
         </pattern>
       </defs>
       <rect width={W} height={H} fill={`url(#grid-${tone})`} />
@@ -87,8 +128,22 @@ export function RouteMapImage({
       />
       {points.map((p, i) => (
         <g key={p.name}>
-          <circle cx={p.x} cy={p.y} r="10" fill={c.dot} stroke={c.ring} strokeWidth="2" />
-          <text x={p.x} y={p.y + 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#FFFFFF">
+          <circle
+            cx={p.x}
+            cy={p.y}
+            r="10"
+            fill={c.dot}
+            stroke={c.ring}
+            strokeWidth="2"
+          />
+          <text
+            x={p.x}
+            y={p.y + 4}
+            textAnchor="middle"
+            fontSize="10"
+            fontWeight="700"
+            fill="#FFFFFF"
+          >
             {i + 1}
           </text>
         </g>
@@ -116,7 +171,12 @@ export function RouteLine({
   const last = points[points.length - 1];
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-hidden>
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      aria-hidden
+    >
       <polyline
         points={points.map((p) => `${p.x},${p.y}`).join(" ")}
         fill="none"
@@ -126,7 +186,14 @@ export function RouteLine({
         strokeLinejoin="round"
       />
       <circle cx={first.x} cy={first.y} r={stroke * 1.2} fill={color} />
-      <circle cx={last.x} cy={last.y} r={stroke * 1.2} fill="none" stroke={color} strokeWidth={stroke / 1.5} />
+      <circle
+        cx={last.x}
+        cy={last.y}
+        r={stroke * 1.2}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke / 1.5}
+      />
     </svg>
   );
 }
