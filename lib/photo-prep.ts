@@ -74,7 +74,13 @@ async function toJpeg(bitmap: ImageBitmap, maxSide: number, quality = JPEG_QUALI
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
   canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+  return new Promise((resolve) =>
+    canvas.toBlob((blob) => {
+      // คืนหน่วยความจำ canvas ทันที (Safari บน iPhone จำกัดหน่วยความจำ canvas รวม เกินแล้วค้าง)
+      canvas.width = canvas.height = 0;
+      resolve(blob);
+    }, "image/jpeg", quality),
+  );
 }
 
 function toDataUrl(blob: Blob): Promise<string | null> {
@@ -121,6 +127,31 @@ export async function prepareChatPhoto(file: File) {
   const [thumbBlob, upload] = await Promise.all([toJpeg(bitmap, THUMB_SIDE, 0.7), toJpeg(bitmap, MAX_SIDE)]);
   bitmap.close();
   return { ...exif, thumb: thumbBlob ? await toDataUrl(thumbBlob) : null, upload };
+}
+
+// คิวเตรียมรูปในแชท: มือถือแรมน้อย ถอดรูปใหญ่พร้อมกันหลายรูปจะช้ามากหรือค้าง จึงทำทีละ 2 รูป
+// แต่ละรูปเกิน 2 นาที = ล้มเหลว (ปล่อยคิวให้รูปถัดไป ผู้ใช้กดลบแล้วแนบใหม่ได้)
+const PREP_CONCURRENCY = 2;
+const PREP_TIMEOUT_MS = 120_000;
+let running = 0;
+const waiting: (() => void)[] = [];
+
+export async function inPrepQueue<T>(task: () => Promise<T>): Promise<T> {
+  if (running >= PREP_CONCURRENCY) await new Promise<void>((resolve) => waiting.push(resolve));
+  running++;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      task(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("prepare timeout")), PREP_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+    running--;
+    waiting.shift()?.();
+  }
 }
 
 // exifr คืนเวลาถ่ายเป็นเวลาท้องถิ่นของกล้อง จึงใช้ getDate() ไม่ใช่ UTC

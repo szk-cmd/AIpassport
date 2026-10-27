@@ -25,7 +25,7 @@ import {
 } from "@/components/ui";
 import { PRICE_PER_DAY } from "@/lib/config";
 import { formatBaht, formatDate } from "@/lib/format";
-import { isSupported, prepareChatPhoto } from "@/lib/photo-prep";
+import { inPrepQueue, isSupported, prepareChatPhoto } from "@/lib/photo-prep";
 import { uploadTripFile } from "@/lib/upload";
 import {
   addMessages,
@@ -252,10 +252,14 @@ export function ChatView() {
       const file = files[i];
       let photo: ChatPhoto | undefined;
       try {
-        const prepared = await prepareChatPhoto(file);
-        const url = prepared.upload
-          ? await uploadTripFile(id, prepared.upload)
-          : null;
+        // ทำทีละ 2 รูป (inPrepQueue) ไม่ให้มือถือแรมเต็มเมื่อแนบหลายรูปพร้อมกัน
+        const { prepared, url } = await inPrepQueue(async () => {
+          const prepared = await prepareChatPhoto(file);
+          const url = prepared.upload
+            ? await uploadTripFile(id, prepared.upload)
+            : null;
+          return { prepared, url };
+        });
         if (url) {
           photo = {
             thumb: prepared.thumb,
