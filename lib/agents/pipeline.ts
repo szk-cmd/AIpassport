@@ -14,7 +14,10 @@ export const PIPELINE = ["01", "02", "03", "04"] as const;
 export type AgentId = (typeof PIPELINE)[number];
 
 const DEPENDS_ON: Record<AgentId, AgentId[]> = { "01": [], "02": ["01"], "03": ["01"], "04": ["02", "03"] };
-const STALE_MS = 150_000; // ขั้นที่ "กำลังทำ" นานเกินนี้ถือว่าค้าง (เช่นปิดหน้าไประหว่างทาง) เริ่มใหม่ได้
+// ขั้นที่ "กำลังทำ" นานเกินนี้ถือว่าค้าง (ปิดหน้าไประหว่างทาง หรือ Vercel ตัดตอนครบ maxDuration 300 วิ) เริ่มใหม่ได้
+const STALE_MS = 320_000;
+// รอบแรกใช้เวลาเกินนี้แล้วพัง ไม่ลองซ้ำใน request เดิม (จะเกิน maxDuration) ให้ผู้ใช้กด "ลองใหม่" แทน
+const RETRY_WITHIN_MS = 90_000;
 const FALLBACK_ERROR = "ขั้นนี้ทำงานไม่สำเร็จ ลองใหม่อีกครั้งนะ";
 
 export type RunStatus = "pending" | "running" | "done" | "failed";
@@ -72,6 +75,7 @@ export async function runAgent(tripId: string, agent: AgentId): Promise<RunState
   const outputOf = <T>(id: AgentId) => rows.get(id)?.output as T;
 
   let attempts = current?.attempts ?? 0;
+  const begun = Date.now();
   for (let round = 1; round <= 2; round++) {
     attempts += 1;
     await saveRun(tripId, agent, {
@@ -87,7 +91,7 @@ export async function runAgent(tripId: string, agent: AgentId): Promise<RunState
       return { agent, status: "done", error: null, attempts };
     } catch (error) {
       console.error(`[pipeline] ${tripId} agent ${agent} รอบที่ ${round}`, error);
-      if (round === 2) {
+      if (round === 2 || Date.now() - begun > RETRY_WITHIN_MS) {
         const message = error instanceof AiError ? error.userMessage : FALLBACK_ERROR;
         await saveRun(tripId, agent, { status: "failed", error: message, ended_at: new Date().toISOString() });
         return { agent, status: "failed", error: message, attempts };

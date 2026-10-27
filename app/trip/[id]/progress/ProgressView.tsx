@@ -18,6 +18,8 @@ type Run = { agent: AgentId; status: "pending" | "running" | "done" | "failed"; 
 // ลำดับ: 01 → (02 และ 03 พร้อมกัน) → 04
 const DEPENDS_ON: Record<AgentId, AgentId[]> = { "01": [], "02": ["01"], "03": ["01"], "04": ["02", "03"] };
 const POLL_MS = 2000;
+// request จบแล้วแต่ขั้นนั้นยัง "กำลังทำ" (เช่น Vercel ตัดเมื่อครบเวลา) → ถาม server ซ้ำทุกเท่านี้ server จะเริ่มใหม่เมื่อค้างจริง
+const RECHECK_MS = 20_000;
 
 export function ProgressView() {
   const router = useRouter();
@@ -25,7 +27,8 @@ export function ProgressView() {
   const [title, setTitle] = useState("");
   const [runs, setRuns] = useState<Record<AgentId, Run> | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const requested = useRef(new Set<AgentId>()); // ขั้นที่หน้านี้สั่งรันไปแล้ว (กันสั่งซ้ำ)
+  const inflight = useRef(new Set<AgentId>()); // ขั้นที่ request ยังไม่จบ (กันสั่งซ้ำ)
+  const lastTried = useRef(new Map<AgentId, number>());
   const reviewUrl = `/trip/${id}/review`;
 
   // อ่านสถานะจริงจาก agent_runs
@@ -46,8 +49,10 @@ export function ProgressView() {
   // สั่งรัน agent หนึ่งขั้น (1 request = 1 agent) แล้วอ่านสถานะใหม่
   const start = useCallback(
     async (agent: AgentId) => {
-      requested.current.add(agent);
+      inflight.current.add(agent);
+      lastTried.current.set(agent, Date.now());
       await fetch(`/api/trips/${id}/agents/${agent}`, { method: "POST" }).catch(() => null);
+      inflight.current.delete(agent);
       await poll();
     },
     [id, poll],
@@ -62,15 +67,17 @@ export function ProgressView() {
     };
   }, [poll]);
 
-  // ขั้นไหนพร้อม (ขั้นก่อนหน้าเสร็จแล้ว) และยังไม่เคยสั่ง → สั่งรันเลย ขั้นที่พังรอผู้ใช้กด "ลองใหม่"
+  // ขั้นไหนพร้อม (ขั้นก่อนหน้าเสร็จแล้ว) และไม่มี request ค้างอยู่ → สั่งรัน ขั้นที่พังรอผู้ใช้กด "ลองใหม่"
   useEffect(() => {
     if (!runs) return;
     for (const { agent } of STEPS) {
       const run = runs[agent];
       const ready = DEPENDS_ON[agent].every((d) => runs[d].status === "done");
-      // "running" ที่หน้านี้ไม่ได้สั่ง (เปิดหน้าใหม่ระหว่างทำ) ถาม server ครั้งเดียว: ยังทำอยู่ = รอ, ค้าง = เริ่มใหม่
+      // "running" ถาม server ซ้ำเป็นระยะ: ยังทำอยู่ = ตอบทันทีแล้วรอต่อ, ค้างจริง = server เริ่มใหม่
       const waiting = run.status === "pending" || run.status === "running";
-      if (ready && waiting && !requested.current.has(agent)) start(agent);
+      const tried = lastTried.current.get(agent);
+      const due = tried === undefined || Date.now() - tried > RECHECK_MS;
+      if (ready && waiting && due && !inflight.current.has(agent)) start(agent);
     }
   }, [runs, start]);
 

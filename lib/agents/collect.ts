@@ -21,7 +21,9 @@ type TripInfo = { id: string; title: string; start_date: string; end_date: strin
 // 2) AI รับบท "บรรณาธิการภาพ" ดูรูปเป็นชุด ชุดละ BATCH_SIZE รูปเรียงตามเวลา ให้คะแนน 1-10 ตามเกณฑ์ เทียบกันในชุด
 // 3) โค้ดเลือกแบบมีสมดุล: ครบทุกวัน ไม่ซ้ำ ไม่เกิน HIGHLIGHTS_PER_DAY ต่อวัน มีรูปปก 1 รูป
 const BATCH_SIZE = 16; // รูปต่อการเรียก AI หนึ่งครั้ง (ให้ AI เทียบรูปในชุดเดียวกันได้)
-const BATCH_CONCURRENCY = 2; // เรียกพร้อมกันไม่เกินนี้ (free tier จำกัดจำนวนครั้งต่อนาที)
+const BATCH_CONCURRENCY = 4; // เรียกพร้อมกันไม่เกินนี้ (free tier จำกัดจำนวนครั้งต่อนาที)
+// หลังเวลานี้ไม่เริ่มชุดใหม่ (ชุดที่เริ่มแล้วใช้ได้อีกไม่เกิน AI_TIMEOUT_MS 90 วิ) ให้จบใน maxDuration 300 วิของ route
+const COLLECT_BUDGET_MS = 150_000;
 const HIGHLIGHTS_PER_DAY = 6;
 const MIN_HIGHLIGHTS = 8;
 const MAX_HIGHLIGHTS = 30;
@@ -228,9 +230,14 @@ async function curatePhotos(photos: CuratedPhoto[], isDemo: boolean) {
   let failed = 0;
   let firstError: unknown = null;
   let next = 0;
+  const started = Date.now();
+  let startedBatches = 0;
+  const attempted = new Set<string>(); // รูปในชุดที่เริ่มทำแล้ว (สำเร็จ หรือพังแล้วใช้คะแนนกลางๆ)
   async function worker() {
-    while (next < batches.length) {
+    while (next < batches.length && Date.now() - started < COLLECT_BUDGET_MS) {
       const batch = batches[next++];
+      startedBatches += 1;
+      for (const p of batch) attempted.add(p.id);
       try {
         await curateBatch(batch);
       } catch (error) {
@@ -241,11 +248,11 @@ async function curatePhotos(photos: CuratedPhoto[], isDemo: boolean) {
     }
   }
   await Promise.all(Array.from({ length: Math.min(BATCH_CONCURRENCY, batches.length) }, worker));
-  if (failed === batches.length) throw firstError instanceof AiError ? firstError : new AiError("คัดรูปไม่สำเร็จ ลองใหม่อีกครั้งนะ");
+  if (failed === startedBatches)
+    throw firstError instanceof AiError ? firstError : new AiError("คัดรูปไม่สำเร็จ ลองใหม่อีกครั้งนะ");
 
-  // รูปที่ไม่ได้ส่งให้ AI ดู (เกินเพดาน) ไม่เอาเข้าพาสปอร์ต
-  const reviewed = new Set(candidates.map((p) => p.id));
-  for (const p of photos) if (p.file_url && !reviewed.has(p.id)) p.keep = false;
+  // รูปที่ไม่ได้ส่งให้ AI ดู (เกินเพดาน หรือหมดเวลาก่อนถึงชุดนั้น) ไม่เอาเข้าพาสปอร์ต
+  for (const p of photos) if (p.file_url && !attempted.has(p.id)) p.keep = false;
 }
 
 async function curateBatch(batch: CuratedPhoto[]) {

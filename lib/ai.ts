@@ -80,19 +80,24 @@ export function aiInfo(): { provider: AiProvider; model: string | null } {
   return { provider: "mock", model: null };
 }
 
+const AI_TIMEOUT_MS = 90_000; // เวลารอ AI สูงสุดต่อครั้ง
+
 let gemini: GoogleGenAI | null = null;
 function geminiClient() {
-  // 429 / 503 (คนใช้เยอะ) ให้ SDK รอแล้วลองใหม่ 1 ครั้ง
+  // 429 / 503 (คนใช้เยอะ) ให้ SDK รอแล้วลองใหม่ 1 ครั้ง, ครั้งไหนค้างเกิน AI_TIMEOUT_MS ตัดทิ้ง (ไม่ให้ทั้งขั้นค้าง)
   gemini ??= new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
-    httpOptions: { retryOptions: { attempts: 2, initialDelay: 2, httpStatusCodes: [429, 503] } },
+    httpOptions: {
+      timeout: AI_TIMEOUT_MS,
+      retryOptions: { attempts: 2, initialDelay: 2, httpStatusCodes: [429, 503] },
+    },
   });
   return gemini;
 }
 
 let anthropic: Anthropic | null = null;
 function anthropicClient() {
-  anthropic ??= new Anthropic({ maxRetries: 1 }); // SDK รอตาม retry-after แล้วลองใหม่ 1 ครั้ง
+  anthropic ??= new Anthropic({ maxRetries: 1, timeout: AI_TIMEOUT_MS }); // SDK รอตาม retry-after แล้วลองใหม่ 1 ครั้ง
   return anthropic;
 }
 
